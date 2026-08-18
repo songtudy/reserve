@@ -68,6 +68,7 @@
   }
   .dayprog.full{color:var(--go);border-color:#26382f}
   .tools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .tools button.off{visibility:hidden;pointer-events:none}
   .tools button{
     width:38px;height:38px;flex:0 0 auto;
     display:grid;place-items:center;
@@ -301,6 +302,7 @@
   textarea::placeholder{ color:#59636f }
 
   /* footer */
+  .foot.hide{display:none}
   .foot{
     position:fixed;left:0;right:0;bottom:0;z-index:30;
     background:rgba(15,19,25,.96);
@@ -790,6 +792,13 @@ window.dispatchEvent(new Event('fb-ready'));
     }
 
     if (leadRow) leadRow.classList.toggle('hide', !st.textContent && !lm.textContent);
+
+    // 명단이 없으면 하단 메뉴와 검색은 할 일이 없다
+    var footEl = document.querySelector('.foot');
+    if (footEl) footEl.classList.toggle('hide', !all.length);
+    document.body.style.paddingBottom = all.length ? '' : '24px';
+    searchBtn.classList.toggle('off', !all.length);
+    if (!all.length && !searchbar.classList.contains('hide')) closeSearch(false);
 
     // 날짜 / 하루 진행 (분모는 취소 포함 전체)
     var doneN = 0, offN = 0;
