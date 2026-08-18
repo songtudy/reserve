@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1319">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="예약보드">
+<title>예약 보드</title>
+<style>
+  :root{
+    --ink:#0f1319;
+    --panel:#161b22;
+    --panel2:#1c222b;
+    --line:#252c36;
+    --text:#f0f3f6;
+    --dim:#8792a0;
+    --wait:#e8b757;
+    --go:#5fb08a;
+    --off:#3d4653;
+    --warn:#c9736a;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--ink)}
+  html{min-height:100%}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,"Noto Sans KR",system-ui,sans-serif;
+    font-size:16px;
+    line-height:1.4;
+    padding:env(safe-area-inset-top) 0 96px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:640px;margin:0 auto;padding:0 14px}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+  /* header */
+  header{
+    position:sticky;top:env(safe-area-inset-top);z-index:20;
+    background:var(--ink);
+    border-bottom:1px solid var(--line);
+    padding:12px 0 11px;
+  }
+  .toprow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .nav{display:flex;align-items:center;gap:0;margin-left:-10px}
+  .nav button{
+    width:38px;height:38px;flex:0 0 auto;
+    background:none;border:0;color:var(--dim);
+    font-size:20px;line-height:1;cursor:pointer;border-radius:9px;
+  }
+  .nav button:active{background:var(--panel2)}
+  .nav button:disabled{opacity:.22}
+  .date{font-size:13px;color:var(--dim);letter-spacing:.01em;white-space:nowrap}
+  .offday .date{color:var(--wait);font-weight:700}
+  .dayprog{
+    font-size:13px;font-weight:800;color:var(--text);
+    background:var(--panel);border:1px solid var(--line);
+    padding:4px 9px;border-radius:8px;
+  }
+  .dayprog.full{color:var(--go);border-color:#26382f}
+  .tools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .tools button{
+    width:38px;height:38px;flex:0 0 auto;
+    display:grid;place-items:center;
+    background:none;border:0;border-radius:9px;
+    color:var(--dim);cursor:pointer;margin-right:-8px;
+  }
+  .tools button:active{background:var(--panel2)}
+  .tools button.on{color:var(--wait);background:var(--panel2)}
+  .sync{font-size:11.5px;color:var(--warn);display:flex;align-items:center;gap:5px;font-weight:600}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--go);opacity:.9}
+  .dot.stale{background:var(--warn)}
+
+  .lead{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-top:8px}
+  .slotlab{font-size:11.5px;font-weight:700;letter-spacing:.08em;color:var(--dim)}
+  .slottime{font-size:23px;font-weight:800;color:var(--wait);letter-spacing:-.03em}
+  .leadmain{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.02em}
+  .leadmain.done{font-size:16px;font-weight:650;color:var(--go)}
+  .leadsub{font-size:13.5px;font-weight:600;color:var(--dim)}
+
+  /* search */
+  .searchbar{position:relative;margin-top:12px}
+  .searchbar.hide{display:none}
+  .searchbar input{
+    width:100%;background:var(--panel);color:var(--text);
+    border:1px solid var(--line);border-radius:11px;
+    padding:11px 74px 11px 13px;font:inherit;font-size:15px;
+    -webkit-appearance:none;appearance:none;
+  }
+  .qcount{
+    position:absolute;right:40px;top:50%;transform:translateY(-50%);
+    font-size:12px;font-weight:700;color:var(--dim);
+    font-variant-numeric:tabular-nums;pointer-events:none;
+  }
+  .qcount.zero{color:var(--warn)}
+  .searchbar input::placeholder{color:var(--dim)}
+  .searchbar input:focus{outline:2px solid var(--wait);outline-offset:-1px}
+  .searchbar input::-webkit-search-cancel-button{display:none}
+  .searchbar button{
+    position:absolute;right:5px;top:50%;transform:translateY(-50%);
+    width:30px;height:30px;border:0;border-radius:8px;
+    background:none;color:var(--dim);font-size:14px;cursor:pointer;
+  }
+  .searchbar button:active{background:var(--panel2)}
+  mark{background:#463a13;color:var(--wait);-webkit-text-fill-color:var(--wait);border-radius:3px;padding:0 1px}
+
+  /* time group */
+  .group{margin-top:16px}
+  .group.shut{margin-top:4px}
+  .group.shut .ghead{padding-top:8px;padding-bottom:8px}
+  .ghead{
+    position:sticky;top:var(--hh,84px);z-index:10;
+    background:var(--ink);
+    display:flex;align-items:center;gap:7px;
+    width:calc(100% + 28px);margin:0 -14px;padding:9px 16px 8px;
+    border:0;font:inherit;color:inherit;text-align:left;cursor:pointer;
+  }
+  .ghead:active{background:var(--panel2)}
+  .chev{
+    color:var(--dim);font-size:15px;line-height:1;width:11px;flex:0 0 auto;
+    transform:rotate(90deg);transition:transform .15s;
+  }
+  .group.shut .chev{transform:rotate(0)}
+  .gtime{font-size:18px;font-weight:800;letter-spacing:-.02em;color:var(--dim)}
+  .gline{flex:1;height:1px;background:var(--line)}
+  .gmeta{font-size:12px;color:var(--dim);display:flex;align-items:center;gap:7px}
+  .gmeta b{font-weight:800;color:var(--text)}
+  .gbreak{color:var(--dim);font-size:11.5px}
+  .group.now .gtime{color:var(--wait)}
+  .group.now .row{border-left-color:var(--wait)}
+  .group.done .gtime{opacity:.6}
+  .group.done .gmeta b{color:var(--go)}
+
+  /* row */
+  .row{
+    display:flex;align-items:stretch;gap:0;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-left:3px solid var(--line);
+    border-radius:var(--radius);
+    margin-bottom:8px;
+    overflow:hidden;
+    transition:border-color .15s,opacity .15s,background .15s;
+  }
+  .main{
+    flex:1;display:flex;align-items:center;gap:12px;
+    padding:14px 12px;min-height:60px;cursor:pointer;
+    background:none;border:0;color:inherit;font:inherit;text-align:left;
+  }
+  .main:active{background:var(--panel2)}
+  .check{
+    width:28px;height:28px;border-radius:9px;flex:0 0 auto;
+    border:2px solid var(--off);
+    display:grid;place-items:center;
+    font-size:15px;font-weight:800;color:transparent;
+    transition:.15s;
+  }
+  .who{flex:1;min-width:0;display:flex;align-items:center}
+  .name{
+    display:block;font-size:17px;font-weight:700;letter-spacing:-.01em;
+    color:var(--text);-webkit-text-fill-color:var(--text);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .tag{
+    font-size:11.5px;font-weight:800;letter-spacing:.04em;
+    padding:4px 8px;border-radius:7px;flex:0 0 auto;white-space:nowrap;
+  }
+  .tag.arrived{background:#1b2f27;color:#7fc9a5;-webkit-text-fill-color:#7fc9a5}
+  .tag.cancelled{background:#332323;color:#d2938c;-webkit-text-fill-color:#d2938c}
+  .pax{
+    font-size:15px;font-weight:750;color:var(--text);
+    background:var(--panel2);border-radius:8px;padding:5px 9px;flex:0 0 auto;
+  }
+  .more{
+    width:44px;flex:0 0 auto;border:0;border-left:1px solid var(--line);
+    background:none;color:var(--dim);font-size:18px;cursor:pointer;
+  }
+  .more:active{background:var(--panel2)}
+
+  .row.arrived{border-left-color:var(--go);background:#141d19}
+  .row.arrived .check{background:var(--go);border-color:var(--go);color:#08241a;-webkit-text-fill-color:#08241a}
+  .row.arrived .name{color:#94a49c;-webkit-text-fill-color:#94a49c;font-weight:600}
+  .row.arrived .pax{color:var(--go);-webkit-text-fill-color:var(--go)}
+
+  .row.cancelled{border-left-color:var(--warn);background:#1a1618}
+  .row.cancelled .name{color:#b8938e;-webkit-text-fill-color:#b8938e;font-weight:600}
+  .row.cancelled .pax{color:#a8837e;-webkit-text-fill-color:#a8837e;background:#241c1d}
+  .row.cancelled .check{
+    border-color:var(--warn);
+    color:var(--warn);-webkit-text-fill-color:var(--warn);
+    font-size:15px;font-weight:800;line-height:1;
+  }
+
+
+  .edit{padding:0 10px 11px}
+  .erow{display:flex;gap:6px}
+  .erow label{
+    display:flex;flex-direction:column;gap:4px;
+    font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--dim);
+  }
+  .erow label.grow{flex:1;min-width:0}
+  .erow input{
+    background:var(--ink);color:var(--text);
+    border:1px solid var(--line);border-radius:9px;
+    padding:10px 9px;font:inherit;font-size:15px;font-weight:600;
+    font-variant-numeric:tabular-nums;width:100%;min-width:0;
+    -webkit-appearance:none;appearance:none;
+  }
+  .erow input:focus{outline:2px solid var(--wait);outline-offset:-1px}
+  .erow label:first-child input{width:66px}
+  .erow label:last-child input{width:58px;text-align:center}
+  .ebtn{display:flex;gap:6px;margin-top:7px}
+  .ebtn button{
+    flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--text);font:inherit;font-size:13px;font-weight:650;cursor:pointer;
+  }
+  .ebtn #e-ok{background:var(--wait);color:#241a05;border-color:var(--wait)}
+  .ebtn button:active{filter:brightness(.9)}
+
+  .menu{display:flex;gap:6px;padding:0 10px 10px}
+  .menu button{
+    flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--text);font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .menu button:active{background:#26313d}
+  .menu .del{color:var(--warn)}
+
+  /* paste panel */
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;margin-top:16px;
+  }
+  .panel h2{margin:0 0 4px;font-size:15px;font-weight:700}
+  .panel p{margin:0 0 10px;font-size:12.5px;color:var(--dim);line-height:1.5}
+  .tawrap{position:relative}
+  .tawrap textarea, .hl{
+    font:inherit;font-size:14px;line-height:1.7;
+    font-variant-numeric:tabular-nums;
+    padding:11px;border:1px solid transparent;border-radius:10px;
+    letter-spacing:0;
+    white-space:pre-wrap;word-break:break-all;overflow-wrap:break-word;
+  }
+  textarea{
+    position:relative;z-index:1;
+    display:block;width:100%;min-height:172px;
+    resize:none;overflow:hidden;
+    background:transparent;color:var(--text);
+    border-color:var(--line);
+    -webkit-appearance:none;appearance:none;
+  }
+  .hl{
+    position:absolute;inset:0;z-index:0;
+    background:var(--ink);border-radius:10px;
+    color:transparent;-webkit-text-fill-color:transparent;
+    overflow:hidden;pointer-events:none;
+    padding:11px 0;
+  }
+  .hl .ln{display:block;padding:0 11px 0 11px}
+  .hl .ln.err{
+    background:rgba(201,115,106,.16);
+    box-shadow:inset 3px 0 0 var(--warn);
+  }
+  textarea:focus{outline:2px solid var(--wait);outline-offset:-1px}
+  .badbox{
+    margin-top:9px;padding:9px 11px;
+    background:#1e1618;border:1px solid #4a2e2c;border-radius:9px;
+    font-size:13px;line-height:1.5;color:#e0a49d;font-weight:600;
+  }
+  .badbox.hide{display:none}
+
+  .btns{display:flex;gap:8px;margin-top:10px}
+  .btn{
+    flex:1;padding:13px 0;border-radius:11px;border:0;
+    font:inherit;font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .btn.primary{background:var(--wait);color:#221703}
+  .btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+  .btn:active{filter:brightness(.9)}
+  textarea::placeholder{
+    color:#5a6875;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:13px;line-height:1.85;
+  }
+
+  /* footer */
+  .foot{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:rgba(15,19,25,.96);
+    backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    padding:9px 14px calc(9px + env(safe-area-inset-bottom));
+  }
+  .foot .inner{max-width:640px;margin:0 auto}
+  .frow{display:flex;gap:7px}
+  .frow + .frow{margin-top:6px}
+  .foot button{
+    flex:1;padding:12px 0;border-radius:11px;
+    border:1px solid var(--line);background:var(--panel);
+    color:var(--text);font:inherit;font-size:14px;font-weight:650;cursor:pointer;
+  }
+  .foot .frow.sub button{
+    padding:9px 0;font-size:12px;font-weight:550;
+    background:none;color:var(--dim);border-color:transparent;
+  }
+  .foot button:active{background:var(--panel2)}
+
+  .empty{text-align:center;color:var(--dim);font-size:13.5px;padding:36px 10px;line-height:1.7;white-space:pre-line}
+  .scrim{
+    position:fixed;inset:0;z-index:50;
+    background:rgba(6,9,13,.72);
+    display:grid;place-items:center;padding:22px;
+  }
+  .scrim.hide{display:none}
+  .dialog{
+    width:100%;max-width:330px;
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:19px 18px 15px;
+  }
+  .dialog h3{margin:0 0 13px;font-size:16.5px;font-weight:750;letter-spacing:-.01em;line-height:1.45;white-space:pre-line}
+  .dialog input{
+    width:100%;background:var(--ink);color:var(--text);
+    border:1px solid var(--line);border-radius:10px;
+    padding:12px 13px;font:inherit;font-size:16px;font-weight:600;
+    text-align:center;-webkit-appearance:none;appearance:none;
+  }
+  .dialog input::placeholder{color:#4b5663;font-weight:400}
+  .dialog input:focus{outline:2px solid var(--wait);outline-offset:-1px}
+  .dbtn{display:flex;gap:8px;margin-top:11px}
+  .dbtn button{
+    flex:1;padding:12px 0;border-radius:11px;
+    border:1px solid var(--line);background:var(--panel2);
+    color:var(--text);font:inherit;font-size:14.5px;font-weight:650;cursor:pointer;
+  }
+  .dbtn #dlgYes{background:var(--wait);color:#241a05;border-color:var(--wait)}
+  .dbtn #dlgYes:disabled{background:var(--panel2);color:#4f5a67;border-color:var(--line);cursor:default}
+  .dbtn button:active{filter:brightness(.9)}
+
+  .toast{
+    position:fixed;left:50%;bottom:84px;transform:translateX(-50%) translateY(8px);
+    background:var(--panel2);border:1px solid var(--line);
+    padding:9px 15px;border-radius:99px;font-size:13px;
+    opacity:0;pointer-events:none;transition:.2s;z-index:40;white-space:nowrap;
+  }
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .hide{display:none !important}
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="toprow">
+      <div class="nav">
+        <button type="button" id="prevDay" aria-label="어제">‹</button>
+        <span class="date num" id="dateLabel">—</span>
+        <button type="button" id="nextDay" aria-label="내일">›</button>
+      </div>
+      <div class="tools">
+        <span class="dayprog num hide" id="dayProg"></span>
+        <div class="sync hide" id="sync"><span class="dot" id="dot"></span><span id="syncTxt"></span></div>
+        <button type="button" id="searchBtn" aria-label="이름 검색">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 L21 21"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="lead">
+      <span class="slottime num" id="slotTime">—</span>
+      <span class="slotlab">예약</span>
+      <span class="leadmain num" id="leadMain"></span>
+      <span class="leadsub num" id="leadSub"></span>
+    </div>
+  </header>
+
+  <div class="searchbar hide" id="searchbar">
+    <input type="search" id="q" placeholder="이름 검색" autocomplete="off" autocorrect="off" spellcheck="false">
+    <span class="qcount hide" id="qCount"></span>
+    <button type="button" id="qClear" class="hide">✕</button>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="panel hide" id="pastePanel">
+    <h2 id="pasteTitle">오늘 예약 명단 붙여넣기</h2>
+    <p>양식에 맞게 붙여넣어 주세요.</p>
+    <div class="tawrap">
+      <div class="hl" id="hl" aria-hidden="true"></div>
+      <textarea id="ta" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" placeholder="14:00 임동현 2명&#10;15:00 김동현 4명 방문&#10;15:00 박동현 2명&#10;17:00 이동현 3명 취소&#10;19:00 송동현 5명"></textarea>
+    </div>
+    <div class="badbox hide" id="badBox"></div>
+    <div class="btns">
+      <button class="btn primary" id="loadBtn">명단 등록</button>
+      <button class="btn ghost hide" id="cancelPaste">취소</button>
+    </div>
+  </div>
+
+  <div class="empty hide" id="emptyMsg"></div>
+</div>
+
+<div class="foot">
+  <div class="inner">
+    <div class="frow">
+      <button id="refreshBtn">새로고침</button>
+      <button id="copyBtn">명단 복사</button>
+    </div>
+    <div class="frow sub">
+      <button id="resetBtn">명단 초기화</button>
+      <button id="addBtn">예약 추가</button>
+      <button id="foldBtn">전체 접기</button>
+    </div>
+  </div>
+</div>
+
+<div class="scrim hide" id="scrim">
+  <div class="dialog">
+    <h3 id="dlgTitle">명단을 초기화할까요?</h3>
+    <input type="text" id="dlgInput" placeholder="예" autocomplete="off" autocorrect="off" spellcheck="false">
+    <div class="dbtn">
+      <button type="button" id="dlgNo">취소</button>
+      <button type="button" id="dlgYes" disabled>초기화</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ---------- Firebase 연결 ----------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import { getDatabase, ref, get, set, remove, onValue, off, child }
+  from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA62A2jtIE77DgOcJ17Jb6S9gH4oTeNeKw",
+  authDomain: "ikseon-reserve.firebaseapp.com",
+  databaseURL: "https://ikseon-reserve-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ikseon-reserve",
+  storageBucket: "ikseon-reserve.firebasestorage.app",
+  messagingSenderId: "456621961785",
+  appId: "1:456621961785:web:a2ba82fb70d6f198b5d3e8"
+};
+
+const db = getDatabase(initializeApp(firebaseConfig));
+const path = k => 'roster/' + String(k).replace('roster:', '');
+
+window.__fb = {
+  get: k => get(ref(db, path(k))).then(s => s.exists() ? s.val() : null),
+  set: (k, v) => set(ref(db, path(k)), v),
+  remove: ds => remove(ref(db, 'roster/' + ds)),
+  list: () => get(ref(db, 'roster')).then(s => s.exists() ? Object.keys(s.val()) : []),
+  watch: (k, cb) => {
+    const r = ref(db, path(k));
+    const h = onValue(r, s => cb(s.exists() ? s.val() : null));
+    return () => off(r, 'value', h);
+  }
+};
+window.dispatchEvent(new Event('fb-ready'));
+</script>
+
+<script>
+(function(){
+  'use strict';
+
+  var DAY_ROLLOVER = 0; // 자정에 날짜가 바뀐다 (마감이 자정을 넘기면 이 값을 올릴 것)
+  var state = null;      // {date, rosterTs, items:[]}
+  var openMenu = null;
+  var editing = null;
+  var collapsed = {}; // 시간대별 수동 접기 상태 (미설정이면 자동)
+  var touched = {};   // 시간대별 마지막 체크 시각
+  var COLLAPSE_DELAY = 3000;
+  var query = '';
+
+  // 자동 접힘: 남은 팀이 없고 + 그 시간대가 이미 지났을 때.
+  // 단, 방금 체크한 직후에는 눈앞에서 접히지 않도록 잠깐 열어둔다.
+  function isCollapsed(time, pendCount, live){
+    if (collapsed[time] !== undefined) return collapsed[time];
+    if (pendCount !== 0 || live) return false;
+    return Date.now() - (touched[time] || 0) > COLLAPSE_DELAY;
+  }
+  var saving = false, dirty = false;
+
+  /* ---------- 날짜 ---------- */
+  var KEEP_DAYS = 2; // 오늘 기준 이보다 오래된 날짜는 삭제
+
+  function pad(n){ return (n<10?'0':'') + n; }
+  function ymd(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+
+  // 오늘의 영업일 (새벽 5시 이전은 전날로 취급)
+  function bizDate(){
+    var d = new Date();
+    if (d.getHours() < DAY_ROLLOVER) d.setDate(d.getDate() - 1);
+    return ymd(d);
+  }
+  function shiftDate(ds, n){
+    var p = ds.split('-');
+    var d = new Date(+p[0], +p[1]-1, +p[2]);
+    d.setDate(d.getDate() + n);
+    return ymd(d);
+  }
+  function dayGap(ds){ // viewDate가 오늘로부터 며칠 떨어져 있나
+    var a = bizDate().split('-'), b = ds.split('-');
+    var t1 = new Date(+a[0], +a[1]-1, +a[2]).getTime();
+    var t2 = new Date(+b[0], +b[1]-1, +b[2]).getTime();
+    return Math.round((t2 - t1) / 86400000);
+  }
+
+  var viewDate = bizDate();
+  function key(){ return 'roster:' + viewDate; }
+
+  function prettyDate(){
+    var p = viewDate.split('-');
+    var d = new Date(+p[0], +p[1]-1, +p[2]);
+    var w = ['일','월','화','수','목','금','토'][d.getDay()];
+    var g = dayGap(viewDate);
+    var label = g === 0 ? '오늘' : g === -1 ? '어제' : g === 1 ? '내일' : '';
+    return p[1] + '월 ' + p[2] + '일 (' + w + ')' + (label ? ' · ' + label : '');
+  }
+
+  // 오래된 날짜 정리
+  function purgeOld(){
+    if (!hasStore()) return;
+    var limit = shiftDate(bizDate(), -KEEP_DAYS);
+    fb().list().then(function(keys){
+      (keys || []).forEach(function(ds){
+        if (/^\d{4}-\d{2}-\d{2}$/.test(ds) && ds < limit) fb().remove(ds).catch(function(){});
+      });
+    }).catch(function(){});
+  }
+
+  /* ---------- 파싱 ---------- */
+  function parse(text){
+    var lines = String(text).split(/\r?\n/);
+    var out = [], bad = [], seen = {};
+    for (var i=0;i<lines.length;i++){
+      var line = lines[i].replace(/\s+/g,' ').trim();
+      if (!line) continue;
+      var m = line.match(/^(\d{1,2})\s*[:.시]\s*(\d{1,2})?\s*분?\s+(.+?)\s+(\d+)\s*명\s*(.*)$/);
+      if (!m){ bad.push({ no: i+1, text: line }); continue; }
+      var time = pad(+m[1]) + ':' + pad(+(m[2]||0));
+      var name = m[3].trim();
+      var pax  = parseInt(m[4],10);
+      var tail = (m[5]||'').trim();
+      var status = 'pending';
+      if (tail === '취소') status = 'cancelled';
+      else if (tail === '방문') status = 'arrived';
+      else if (tail){ bad.push({ no: i+1, text: line }); continue; }  // 뒤에 붙은 알 수 없는 말
+      var hh = +m[1], mm = +(m[2]||0);
+      if (hh > 23 || mm > 59 || pax < 1){ bad.push({ no: i+1, text: line }); continue; }
+      var base = time + '|' + name + '|' + pax;
+      seen[base] = (seen[base]||0) + 1;
+      out.push({ id: base + '|' + seen[base], time:time, name:name, pax:pax, status:status, ts:0, seq: out.length });
+    }
+    out.bad = bad;
+    return out;
+  }
+
+  function sortItems(a,b){
+    if (a.time !== b.time) return a.time < b.time ? -1 : 1;
+    return (a.seq||0) - (b.seq||0);
+  }
+
+  /* ---------- 저장소 (Firebase Realtime Database) ---------- */
+  function fb(){ return window.__fb; }
+  function hasStore(){ return !!fb(); }
+
+  function loadRemote(){
+    if (!hasStore()) return Promise.resolve(null);
+    return fb().get(key()).catch(function(){ return null; });
+  }
+
+  function writeRemote(data){
+    if (!hasStore()) return Promise.resolve(data);
+    return fb().set(key(), data).then(function(){ return data; });
+  }
+
+  // 다른 기기의 변경을 즉시 받아온다
+  var unwatch = null;
+  function watchRemote(){
+    if (unwatch){ unwatch(); unwatch = null; }
+    if (!hasStore()) return;
+    unwatch = fb().watch(key(), function(remote){
+      if (!remote || saving) return;
+      var merged = merge(remote, state);
+      if (JSON.stringify(merged) === JSON.stringify(state)) return;
+      state = merged;
+      if (!editing) render();
+    });
+  }
+
+  function merge(a, b){
+    if (!a) return b;
+    if (!b) return a;
+    var base  = (a.rosterTs||0) >= (b.rosterTs||0) ? a : b;
+    var other = base === a ? b : a;
+    var map = {};
+    other.items.forEach(function(it){ map[it.id] = it; });
+    var items = base.items.map(function(it){
+      var o = map[it.id];
+      if (o && (o.ts||0) > (it.ts||0)) {
+        return { id:it.id, time:it.time, name:it.name, pax:it.pax, seq:it.seq, status:o.status, ts:o.ts };
+      }
+      return it;
+    });
+    return { date: base.date, rosterTs: base.rosterTs, items: items };
+  }
+
+  function sync(){
+    return loadRemote().then(function(remote){
+      var merged = merge(remote, state);
+      var changed = JSON.stringify(merged) !== JSON.stringify(state);
+      state = merged;
+      if (changed && !editing) render();
+      setSync(true);
+    }).catch(function(){ setSync(false); });
+  }
+
+  var saveTimer = null;
+  function save(){
+    dirty = true;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 250);
+  }
+  function flush(){
+    if (saving || !state) return;
+    saving = true; dirty = false;
+    loadRemote().then(function(remote){
+      var merged = merge(remote, state);
+      state = merged;
+      return writeRemote(merged);
+    }).then(function(){
+      saving = false; setSync(true); render();
+      if (dirty) flush();
+    }).catch(function(){
+      saving = false; setSync(false);
+      toast('저장 실패 — 잠시 뒤 다시 시도합니다');
+      setTimeout(flush, 3000);
+    });
+  }
+
+  function setSync(ok){
+    var box = document.getElementById('sync');
+    var dot = document.getElementById('dot');
+    var txt = document.getElementById('syncTxt');
+    if (ok && hasStore()){ box.classList.add('hide'); return; }
+    box.classList.remove('hide');
+    dot.className = 'dot stale';
+    txt.textContent = '연결 안 됨';
+  }
+
+  /* ---------- 렌더 ---------- */
+  // 시간대별 마감 기준
+  //  - 정각(00분) 예약: 10분 59.999초까지 유지 → 11분 정각에 다음으로
+  //  - 비정각 예약   : 3분 59.999초까지 유지  → 4분 정각에 다음으로
+  var GRACE_ON_HOUR = 11, GRACE_OFF_HOUR = 4;
+
+  function nowMin(){
+    var d = new Date();
+    return d.getHours()*60 + d.getMinutes() + d.getSeconds()/60 + d.getMilliseconds()/60000;
+  }
+  function slotMin(hm){
+    var p = hm.split(':');
+    return (+p[0])*60 + (+p[1]);
+  }
+  function slotLive(hm, now){
+    var m = slotMin(hm);
+    var grace = (m % 60 === 0) ? GRACE_ON_HOUR : GRACE_OFF_HOUR;
+    return now < m + grace;
+  }
+
+  function render(){
+    document.getElementById('dateLabel').textContent = prettyDate();
+    var list = document.getElementById('list');
+    var all = state ? state.items.slice().sort(sortItems) : [];
+    var q = (query || '').trim().toLowerCase();
+    var items = q
+      ? all.filter(function(it){ return it.name.toLowerCase().indexOf(q) !== -1; })
+      : all;
+
+    var qc = document.getElementById('qCount');
+    if (q){
+      qc.classList.remove('hide');
+      qc.className = 'qcount' + (items.length ? '' : ' zero');
+      qc.textContent = items.length + '건';
+    } else {
+      qc.classList.add('hide');
+    }
+
+    // 시간대 묶기 — 표시용은 검색 결과, 계산용(allGroups)은 전체
+    function groupBy(arr){
+      var gs = [], gi = {};
+      arr.forEach(function(it){
+        if (gi[it.time] === undefined){ gi[it.time] = gs.length; gs.push({time:it.time, items:[]}); }
+        gs[gi[it.time]].items.push(it);
+      });
+      return gs;
+    }
+    var groups = groupBy(items);
+    var allGroups = q ? groupBy(all) : groups;
+
+    // 다음 시간대 — 아직 마감되지 않았고 남은 팀이 있는 첫 시간대 (오늘일 때만)
+    var now = nowMin(), nowTime = null;
+    if (dayGap(viewDate) === 0){
+      for (var i=0;i<allGroups.length;i++){
+        if (!slotLive(allGroups[i].time, now)) continue;
+        if (allGroups[i].items.some(function(x){ return x.status==='pending'; })){ nowTime = allGroups[i].time; break; }
+      }
+    }
+
+    // 헤더 — 검색과 무관하게 항상 전체 기준
+    var gap = dayGap(viewDate);
+    var slotPend = [];
+    if (nowTime){
+      allGroups.forEach(function(g){
+        if (g.time === nowTime) slotPend = g.items.filter(function(x){ return x.status==='pending'; });
+      });
+    }
+    var st = document.getElementById('slotTime');
+    var lb = document.querySelector('.slotlab');
+    var lm = document.getElementById('leadMain');
+    var ls = document.getElementById('leadSub');
+
+    if (slotPend.length){
+      st.textContent = nowTime;
+      lb.textContent = '예약';
+      lm.className = 'leadmain num';
+      lm.textContent = slotPend.length + '팀';
+      var byPax = {};
+      slotPend.forEach(function(x){ byPax[x.pax] = (byPax[x.pax]||0) + 1; });
+      ls.textContent = Object.keys(byPax).map(Number).sort(function(a,b){ return a-b; })
+        .map(function(p){ return p + '인 ' + byPax[p] + '팀'; }).join(' · ');
+    } else if (gap !== 0 && all.length){
+      // 어제/내일 — 시간대 강조 대신 하루 총 팀수
+      st.textContent = '';
+      lb.textContent = '';
+      lm.className = 'leadmain num';
+      lm.textContent = all.length + '팀';
+      ls.textContent = '';
+    } else {
+      st.textContent = '';
+      lb.textContent = '';
+      lm.className = 'leadmain num done';
+      lm.textContent = all.length ? '남은 예약 없음' : '';
+      ls.textContent = '';
+    }
+
+    // 날짜 / 하루 진행 (분모는 취소 포함 전체)
+    var doneN = 0, offN = 0;
+    all.forEach(function(it){
+      if (it.status === 'arrived') doneN++;
+      else if (it.status === 'cancelled') offN++;
+    });
+    document.getElementById('dateLabel').textContent = prettyDate();
+    var dp = document.getElementById('dayProg');
+    dp.textContent = (doneN + offN) + '/' + all.length;
+    dp.className = 'dayprog num' + (all.length ? '' : ' hide')
+      + (all.length && doneN + offN === all.length ? ' full' : '');
+
+    // 날짜 표시 / 이동 버튼
+    document.body.classList.toggle('offday', gap !== 0);
+    document.getElementById('prevDay').disabled = (gap <= -1);
+    document.getElementById('nextDay').disabled = (gap >= 1);
+
+    // 목록
+    list.innerHTML = '';
+    var em = document.getElementById('emptyMsg');
+    if (!items.length){
+      if (q){
+        em.classList.remove('hide');
+        em.textContent = '「' + query.trim() + '」와(과) 일치하는 예약이 없습니다.';
+      } else {
+        em.classList.add('hide');
+        if (state && panel.classList.contains('hide')) openPaste(false, true);
+      }
+      return;
+    }
+    em.classList.add('hide');
+
+    var openCount = 0;
+    groups.forEach(function(g, idx){
+      var pend = g.items.filter(function(x){ return x.status==='pending'; });
+      var came = g.items.filter(function(x){ return x.status==='arrived'; }).length;
+      var off  = g.items.filter(function(x){ return x.status==='cancelled'; }).length;
+      var tot  = g.items.length;
+      var stillLive = (gap === 0) && slotLive(g.time, now);
+      var shut = q ? false : isCollapsed(g.time, pend.length, stillLive);
+
+      var wrap = document.createElement('section');
+      wrap.className = 'group' + (g.time === nowTime ? ' now' : (pend.length ? '' : ' done')) + (shut ? ' shut' : '');
+
+      var head = document.createElement('button');
+      head.className = 'ghead';
+      head.type = 'button';
+      head.innerHTML = '<span class="chev">›</span>'
+        + '<span class="gtime num">' + g.time + '</span>'
+        + '<span class="gline"></span>'
+        + '<span class="gmeta num">'
+        +   '<b>' + (came + off) + '/' + tot + '</b>'
+        +   '<span class="gbreak">방문 ' + came + (off ? ' · 취소 ' + off : '') + '</span>'
+        + '</span>';
+      head.addEventListener('click', function(){
+        collapsed[g.time] = !shut;
+        render();
+      });
+      wrap.appendChild(head);
+
+      if (!shut) g.items.forEach(function(it){ wrap.appendChild(rowEl(it)); });
+      list.appendChild(wrap);
+      openCount += shut ? 0 : 1;
+    });
+
+    var fb = document.getElementById('foldBtn');
+    if (fb) fb.textContent = openCount ? '전체 접기' : '전체 펼치기';
+
+    var hd = document.querySelector('header');
+    if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
+  }
+
+  function rowEl(it){
+    var row = document.createElement('div');
+    row.className = 'row ' + it.status;
+
+    var body = document.createElement('div');
+    body.style.cssText = 'flex:1;display:flex;flex-direction:column';
+
+    var top = document.createElement('div');
+    top.style.cssText = 'display:flex;align-items:stretch';
+
+    var main = document.createElement('button');
+    main.className = 'main';
+    main.type = 'button';
+    var mark = it.status === 'arrived' ? '✓'
+             : it.status === 'cancelled' ? '✕' : '';
+    var tag = it.status === 'arrived' ? '<span class="tag arrived">방문</span>'
+            : it.status === 'cancelled' ? '<span class="tag cancelled">취소</span>'
+            : '';
+    main.innerHTML = '<span class="check">' + mark + '</span>'
+      + '<span class="who"><span class="name"></span></span>'
+      + tag
+      + '<span class="pax num">' + it.pax + '명</span>';
+    var nameEl = main.querySelector('.name');
+    var qq = (query||'').trim().toLowerCase();
+    var hit = qq ? it.name.toLowerCase().indexOf(qq) : -1;
+    if (hit >= 0){
+      nameEl.appendChild(document.createTextNode(it.name.slice(0, hit)));
+      var mk = document.createElement('mark');
+      mk.textContent = it.name.slice(hit, hit + qq.length);
+      nameEl.appendChild(mk);
+      nameEl.appendChild(document.createTextNode(it.name.slice(hit + qq.length)));
+    } else {
+      nameEl.textContent = it.name;
+    }
+    main.addEventListener('click', function(){ toggle(it.id); });
+
+    var more = document.createElement('button');
+    more.className = 'more';
+    more.type = 'button';
+    more.textContent = '⋯';
+    more.addEventListener('click', function(e){
+      e.stopPropagation();
+      openMenu = (openMenu === it.id) ? null : it.id;
+      render();
+    });
+
+    top.appendChild(main); top.appendChild(more);
+    body.appendChild(top);
+
+    if (editing === it.id){
+      var form = document.createElement('div');
+      form.className = 'edit';
+      form.innerHTML = '<div class="erow">'
+        + '<label>시간<input type="text" inputmode="numeric" id="e-time" maxlength="5"></label>'
+        + '<label class="grow">이름<input type="text" id="e-name"></label>'
+        + '<label>인원<input type="number" inputmode="numeric" id="e-pax" min="1" max="99"></label>'
+        + '</div>'
+        + '<div class="ebtn"><button type="button" id="e-ok">저장</button>'
+        + '<button type="button" id="e-no">취소</button></div>';
+      body.appendChild(form);
+      form.querySelector('#e-time').value = it.time;
+      form.querySelector('#e-name').value = it.name;
+      form.querySelector('#e-pax').value = it.pax;
+      form.addEventListener('click', function(e){ e.stopPropagation(); });
+      form.querySelector('#e-no').addEventListener('click', function(){ editing = null; render(); });
+      form.querySelector('#e-ok').addEventListener('click', function(){
+        applyEdit(it.id,
+          form.querySelector('#e-time').value,
+          form.querySelector('#e-name').value,
+          form.querySelector('#e-pax').value);
+      });
+      form.querySelector('#e-name').addEventListener('keydown', function(e){
+        if (e.key === 'Enter') form.querySelector('#e-ok').click();
+      });
+    } else if (openMenu === it.id){
+      var menu = document.createElement('div');
+      menu.className = 'menu';
+      [['방문','arrived'],['취소','cancelled']].forEach(function(p){
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = p[0];
+        b.addEventListener('click', function(e){ e.stopPropagation(); setStatus(it.id, p[1]); });
+        menu.appendChild(b);
+      });
+      var ed = document.createElement('button');
+      ed.type = 'button'; ed.textContent = '수정';
+      ed.addEventListener('click', function(e){
+        e.stopPropagation();
+        editing = it.id; openMenu = null; render();
+        var f = document.getElementById('e-name');
+        if (f) f.focus();
+      });
+      menu.appendChild(ed);
+      var del = document.createElement('button');
+      del.type = 'button'; del.className = 'del'; del.textContent = '삭제';
+      del.addEventListener('click', function(e){
+        e.stopPropagation();
+        state.items = state.items.filter(function(x){ return x.id !== it.id; });
+        state.rosterTs = Date.now();
+        openMenu = null; render(); save();
+      });
+      menu.appendChild(del);
+      body.appendChild(menu);
+    }
+
+    row.appendChild(body);
+    return row;
+  }
+
+  // "1530" "15:30" "15시30분" "15.30" → "15:30"
+  function normTime(v){
+    var s = String(v).replace(/\s/g,'');
+    var m = s.match(/^(\d{1,2})[:.시]?(\d{1,2})?분?$/);
+    if (!m) return null;
+    var h = +m[1], mi = m[2] === undefined ? 0 : +m[2];
+    if (m[2] === undefined && s.length === 4){ h = +s.slice(0,2); mi = +s.slice(2); }
+    if (h > 23 || mi > 59) return null;
+    return pad(h) + ':' + pad(mi);
+  }
+
+  function uniqueId(time, name, pax, skipId){
+    var base = time + '|' + name + '|' + pax, n = 0, id;
+    do { n++; id = base + '|' + n; }
+    while (state.items.some(function(x){ return x.id === id && x.id !== skipId; }));
+    return id;
+  }
+
+  function applyEdit(id, timeV, nameV, paxV){
+    var it = find(id);
+    if (!it) return;
+    var time = normTime(timeV);
+    var name = String(nameV).replace(/\s+/g,' ').trim();
+    var pax = parseInt(paxV, 10);
+    if (!time){ toast('시간 형식을 확인해 주세요'); return; }
+    if (!name){ toast('이름을 입력해 주세요'); return; }
+    if (!(pax > 0)){ toast('인원을 확인해 주세요'); return; }
+
+    if (time === it.time && name === it.name && pax === it.pax){ editing = null; render(); return; }
+
+    // 시간이 바뀌면 옮겨간 시간대의 맨 뒤로
+    if (time !== it.time){
+      var maxSeq = 0;
+      state.items.forEach(function(x){ if ((x.seq||0) > maxSeq) maxSeq = x.seq||0; });
+      it.seq = maxSeq + 1;
+    }
+
+    it.time = time; it.name = name; it.pax = pax;
+    it.id = uniqueId(time, name, pax, id);
+    state.items.sort(sortItems);
+    state.rosterTs = Date.now();
+    editing = null;
+    render();
+    save();
+    toast('수정됨');
+  }
+
+  function find(id){
+    for (var i=0;i<state.items.length;i++) if (state.items[i].id === id) return state.items[i];
+    return null;
+  }
+  function toggle(id){
+    var it = find(id);
+    if (!it) return;
+    setStatus(id, it.status === 'arrived' ? 'pending' : 'arrived');
+  }
+  function setStatus(id, st){
+    var it = find(id);
+    if (!it) return;
+    it.status = st;
+    it.ts = Date.now();
+    touched[it.time] = Date.now();
+    openMenu = null;
+    render();
+    save();
+    // 접힘 유예가 끝나는 시점에 한 번 더 그려준다
+    setTimeout(render, COLLAPSE_DELAY + 100);
+    if (st === 'arrived') toast(it.name + ' 방문 체크');
+  }
+
+  /* ---------- 명단 등록 ---------- */
+  var badBox = document.getElementById('badBox');
+  var hl = document.getElementById('hl');
+  var taEl = document.getElementById('ta');
+  var marking = false;   // 오류 표시 중인지
+
+  function esc(t){
+    return t.replace(/[<>&]/g, function(c){ return { '<':'&lt;', '>':'&gt;', '&':'&amp;' }[c]; });
+  }
+  function autoGrow(){
+    taEl.style.height = 'auto';
+    taEl.style.height = Math.max(172, taEl.scrollHeight) + 'px';
+  }
+  function clearBad(){
+    marking = false;
+    badBox.classList.add('hide');
+    hl.innerHTML = '';
+  }
+  // 지금 커서가 있는 줄 번호 (1부터)
+  function caretLine(){
+    var pos = taEl.selectionStart;
+    if (pos === null || pos === undefined) return -1;
+    return String(taEl.value).slice(0, pos).split(/\r?\n/).length;
+  }
+  function paintBad(bad, skipLine){
+    var nos = {};
+    bad.forEach(function(b){ if (b.no !== skipLine) nos[b.no] = true; });
+    hl.innerHTML = String(taEl.value).split(/\r?\n/).map(function(line, i){
+      var t = esc(line) || ' ';
+      return '<span class="ln' + (nos[i+1] ? ' err' : '') + '">' + t + '</span>';
+    }).join('');
+  }
+  function showBad(bad){
+    marking = true;
+    paintBad(bad, -1);
+    badBox.textContent = '표시된 줄을 양식에 맞게 고쳐 주세요';
+    badBox.classList.remove('hide');
+    autoGrow();
+  }
+  // 표시 중일 때는 입력할 때마다 다시 검사한다.
+  // 고친 줄만 표시가 사라지고, 나머지는 그대로 남는다.
+  var recheckTimer = null;
+  function recheck(skipCaret){
+    if (!marking) return;
+    var bad = parse(taEl.value).bad;
+    if (!bad.length){ clearBad(); return; }
+    paintBad(bad, skipCaret ? caretLine() : -1);
+  }
+  taEl.addEventListener('input', function(){
+    autoGrow();
+    clearTimeout(recheckTimer);
+    recheckTimer = setTimeout(function(){ recheck(true); }, 180);
+  });
+  // 입력칸을 벗어나면 치던 줄도 다시 검사한다
+  taEl.addEventListener('blur', function(){
+    clearTimeout(recheckTimer);
+    recheck(false);
+  });
+
+  function applyPaste(text, append){
+    var fresh = parse(text);
+    if (fresh.bad.length){ showBad(fresh.bad); return false; }
+    clearBad();
+    if (!fresh.length){ toast('읽을 수 있는 줄이 없습니다'); return false; }
+    var items, added = fresh.length;
+    if (append && state){
+      var exist = {};
+      var maxSeq = 0;
+      state.items.forEach(function(it){
+        exist[it.id] = true;
+        if ((it.seq||0) > maxSeq) maxSeq = it.seq||0;
+      });
+      items = state.items.slice();
+      added = 0;
+      fresh.forEach(function(it){
+        if (exist[it.id]) return;
+        it.seq = ++maxSeq;
+        items.push(it);
+        added++;
+      });
+      if (!added){ toast('이미 등록된 예약입니다'); return false; }
+    } else {
+      items = fresh;
+    }
+    state = { date: viewDate, rosterTs: Date.now(), items: items.sort(sortItems) };
+    render();
+    flush();
+    toast(added + '건 등록');
+    return true;
+  }
+
+  /* ---------- UI 연결 ---------- */
+  var panel = document.getElementById('pastePanel');
+  var ta = document.getElementById('ta');
+  var appendMode = false;
+
+  function openPaste(append, silent){
+    appendMode = append;
+    var g = dayGap(viewDate);
+    var day = g === 1 ? '내일' : g === -1 ? '어제' : '오늘';
+    document.getElementById('pasteTitle').textContent = append ? '예약 추가' : (day + ' 예약 명단 붙여넣기');
+    // 명단이 아예 없을 땐 돌아갈 화면이 없으므로 취소 버튼을 숨긴다
+    var hasItems = !!(state && state.items && state.items.length);
+    document.getElementById('cancelPaste').classList.toggle('hide', !hasItems);
+    ta.value = '';
+    clearBad();
+    autoGrow();
+    panel.classList.remove('hide');
+    if (silent) return;
+    panel.scrollIntoView({behavior:'smooth', block:'center'});
+    setTimeout(function(){ ta.focus(); }, 200);
+  }
+  function closePaste(){ panel.classList.add('hide'); }
+
+  var scrim = document.getElementById('scrim');
+  function confirmDlg(title, onYes){
+    var yes = document.getElementById('dlgYes');
+    var no  = document.getElementById('dlgNo');
+    var inp = document.getElementById('dlgInput');
+    document.getElementById('dlgTitle').textContent = title;
+    inp.value = '';
+    yes.disabled = true;
+    scrim.classList.remove('hide');
+    setTimeout(function(){ inp.focus(); }, 150);
+
+    function ok(){ return inp.value.trim() === '예'; }
+    function done(){
+      scrim.classList.add('hide');
+      yes.onclick = null; no.onclick = null; scrim.onclick = null;
+      inp.oninput = null; inp.onkeydown = null;
+    }
+    inp.oninput = function(){ yes.disabled = !ok(); };
+    inp.onkeydown = function(e){ if (e.key === 'Enter' && ok()){ done(); onYes(); } };
+    yes.onclick = function(){ if (ok()){ done(); onYes(); } };
+    no.onclick  = done;
+    scrim.onclick = function(e){ if (e.target === scrim) done(); };
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', function(){
+    if (!state || !state.items.length){ toast('명단이 없습니다'); return; }
+    var g = dayGap(viewDate);
+    var day = g === 1 ? '내일' : g === -1 ? '어제' : '오늘';
+    confirmDlg(day + ' 명단을 초기화할까요?\n「예」를 입력해 주세요', function(){
+      state = { date: viewDate, rosterTs: Date.now(), items: [] };
+      collapsed = {};
+      closeSearch(false);
+      window.scrollTo(0, 0);
+      render();
+      flush();
+    });
+  });
+
+  document.getElementById('loadBtn').addEventListener('click', function(){
+    if (applyPaste(ta.value, appendMode)) closePaste();
+  });
+  document.getElementById('cancelPaste').addEventListener('click', closePaste);
+  document.getElementById('addBtn').addEventListener('click', function(){ openPaste(true); });
+
+  /* ---------- 검색 ---------- */
+  var qEl = document.getElementById('q');
+  var qClear = document.getElementById('qClear');
+  var searchbar = document.getElementById('searchbar');
+  var searchBtn = document.getElementById('searchBtn');
+
+  var scrollBeforeSearch = 0;
+
+  function closeSearch(restore){
+    var wasOpen = !searchbar.classList.contains('hide');
+    searchbar.classList.add('hide');
+    searchBtn.classList.remove('on');
+    qEl.value = ''; query = '';
+    qClear.classList.add('hide');
+    if (wasOpen && restore){
+      requestAnimationFrame(function(){ window.scrollTo(0, scrollBeforeSearch); });
+    }
+  }
+  searchBtn.addEventListener('click', function(){
+    if (searchbar.classList.contains('hide')){
+      scrollBeforeSearch = window.pageYOffset || document.documentElement.scrollTop || 0;
+      searchbar.classList.remove('hide');
+      searchBtn.classList.add('on');
+      window.scrollTo(0, 0);
+      qEl.focus();
+    } else {
+      closeSearch(true);
+    }
+    render();
+  });
+  qEl.addEventListener('input', function(){
+    query = qEl.value;
+    qClear.classList.toggle('hide', !query);
+    render();
+  });
+  qClear.addEventListener('click', function(){
+    qEl.value = ''; query = '';
+    qClear.classList.add('hide');
+    render();
+    qEl.focus();
+  });
+
+  /* ---------- 날짜 이동 ---------- */
+  function goDate(ds){
+    var g = dayGap(ds);
+    if (g < -1 || g > 1) return;
+    viewDate = ds;
+    editing = null; openMenu = null; collapsed = {}; touched = {};
+    closeSearch(false);
+    state = null;
+    closePaste();
+    window.scrollTo(0, 0);
+    render();
+    loadRemote().then(function(remote){
+      state = (remote && remote.items) ? remote : { date: viewDate, rosterTs: 0, items: [] };
+      render();
+      setSync(true);
+      watchRemote();
+    }).catch(function(){
+      state = { date: viewDate, rosterTs: 0, items: [] };
+      render();
+      setSync(false);
+    });
+  }
+  var foldBtn = document.getElementById('foldBtn');
+  foldBtn.addEventListener('click', function(){
+    if (!state || !state.items.length) return;
+    var times = {}, anyOpen = false;
+    state.items.forEach(function(it){
+      if (times[it.time] !== undefined) return;
+      var pend = state.items.some(function(x){ return x.time===it.time && x.status==='pending'; });
+      times[it.time] = true;
+      var live = (dayGap(viewDate) === 0) && slotLive(it.time, nowMin());
+      if (!isCollapsed(it.time, pend ? 1 : 0, live)) anyOpen = true;
+    });
+    Object.keys(times).forEach(function(t){ collapsed[t] = anyOpen; });
+    render();
+  });
+
+  document.getElementById('prevDay').addEventListener('click', function(){ goDate(shiftDate(viewDate, -1)); });
+  document.getElementById('nextDay').addEventListener('click', function(){ goDate(shiftDate(viewDate, 1)); });
+
+  var refreshBtn = document.getElementById('refreshBtn');
+  refreshBtn.addEventListener('click', function(){
+    if (!state){ toast('명단 없음'); return; }
+    sync().then(function(){ toast('최신 상태'); });
+  });
+
+  // 보고용 텍스트 — 체크 안 된 건 뒤에 아무것도 안 붙임
+  function reportText(){
+    if (!state || !state.items.length) return '';
+    var prev = null, out = [];
+    state.items.slice().sort(sortItems).forEach(function(it){
+      if (prev !== null && it.time !== prev) out.push('');
+      prev = it.time;
+      var tail = it.status === 'arrived' ? ' 방문'
+               : it.status === 'cancelled' ? ' 취소' : '';
+      out.push(it.time + ' ' + it.name + ' ' + it.pax + '명' + tail);
+    });
+    return out.join('\n');
+  }
+
+  document.getElementById('copyBtn').addEventListener('click', function(){
+    var txt = reportText();
+    if (!txt){ toast('복사할 명단이 없습니다'); return; }
+    var done = function(){ toast(state.items.length + '건 복사됨'); };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done).catch(function(){ fallbackCopy(txt, done); });
+    } else {
+      fallbackCopy(txt, done);
+    }
+  });
+
+  function fallbackCopy(txt, done){
+    var t = document.createElement('textarea');
+    t.value = txt;
+    t.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(t);
+    t.focus(); t.select(); t.setSelectionRange(0, txt.length);
+    try { document.execCommand('copy'); done(); }
+    catch(e){ toast('복사 실패 — 다시 시도해 주세요'); }
+    document.body.removeChild(t);
+  }
+
+  var toastTimer;
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove('on'); }, 1600);
+  }
+
+  /* ---------- 시작 ---------- */
+  function boot(){
+    purgeOld();
+    loadRemote().then(function(remote){
+      state = (remote && remote.items) ? remote : { date: viewDate, rosterTs: 0, items: [] };
+      render();
+      setSync(true);
+      watchRemote();
+    }).catch(function(){
+      state = { date: viewDate, rosterTs: 0, items: [] };
+      render();
+      setSync(false);
+    });
+  }
+
+  // 화면으로 돌아오면 한 번 확인 (실시간 수신은 watchRemote가 담당)
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden && state) sync();
+  });
+
+  // 시간대 자동 전환 + 영업일이 바뀌면 오늘로 복귀
+  var lastBiz = bizDate();
+  setInterval(function(){
+    if (editing) return;
+    var b = bizDate();
+    if (b !== lastBiz){ lastBiz = b; viewDate = b; collapsed = {}; touched = {}; purgeOld(); boot(); return; }
+    render();
+  }, 5000);
+
+  // Firebase 모듈이 먼저 준비되면 바로, 아니면 준비 신호를 기다린다
+  if (window.__fb) boot();
+  else {
+    window.addEventListener('fb-ready', boot, { once: true });
+    setTimeout(function(){ if (!state) boot(); }, 4000);  // 로딩 실패 시에도 화면은 뜨게
+  }
+})();
+</script>
+</body>
+</html>
