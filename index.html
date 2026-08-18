@@ -46,7 +46,7 @@
     border-bottom:1px solid var(--line);
     padding:12px 0 11px;
   }
-  .toprow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .toprow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px}
   .nav{display:flex;align-items:center;gap:0;margin-left:-10px}
   .nav button{
     width:38px;height:38px;flex:0 0 auto;padding:0;
@@ -61,6 +61,7 @@
   .offday .date{color:var(--wait);font-weight:700}
   .offday .nav button{color:var(--wait)}
   .dayprog{
+    display:flex;align-items:center;line-height:1;
     font-size:13.5px;font-weight:800;color:var(--text);
     background:var(--panel);border:1px solid var(--line);
     padding:4px 9px;border-radius:8px;
@@ -75,7 +76,7 @@
   }
   .tools button:active{background:var(--panel2)}
   .tools button.on{color:var(--wait);background:var(--panel2)}
-  .sync{font-size:11.5px;color:var(--warn);display:flex;align-items:center;gap:5px;font-weight:600}
+  .sync{font-size:11.5px;color:var(--warn);display:flex;align-items:center;gap:5px;font-weight:600;line-height:1;height:38px}
   .sync.ok{color:var(--dim);font-weight:500}
   .dot{width:6px;height:6px;border-radius:50%;background:var(--go);opacity:.9}
   .dot.stale{background:var(--warn)}
