@@ -73,6 +73,7 @@
   .tools button:active{background:var(--panel2)}
   .tools button.on{color:var(--wait);background:var(--panel2)}
   .sync{font-size:11.5px;color:var(--warn);display:flex;align-items:center;gap:5px;font-weight:600}
+  .sync.ok{color:var(--dim);font-weight:500}
   .dot{width:6px;height:6px;border-radius:50%;background:var(--go);opacity:.9}
   .dot.stale{background:var(--warn)}
 
@@ -363,7 +364,7 @@
       </div>
       <div class="tools">
         <span class="dayprog num hide" id="dayProg"></span>
-        <div class="sync hide" id="sync"><span class="dot" id="dot"></span><span id="syncTxt"></span></div>
+        <div class="sync" id="sync"><span class="dot stale" id="dot"></span><span id="syncTxt">연결 안 됨</span></div>
         <button type="button" id="searchBtn" aria-label="이름 검색">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 L21 21"/>
@@ -459,7 +460,9 @@ window.__fb = {
     const r = ref(db, path(k));
     const h = onValue(r, s => cb(s.exists() ? s.val() : null));
     return () => off(r, 'value', h);
-  }
+  },
+  // Firebase가 알려주는 실제 연결 상태
+  onConnected: cb => onValue(ref(db, '.info/connected'), s => cb(s.val() === true))
 };
 window.dispatchEvent(new Event('fb-ready'));
 </script>
@@ -586,15 +589,23 @@ window.dispatchEvent(new Event('fb-ready'));
     if (unwatch){ unwatch(); unwatch = null; }
     if (!hasStore()) return;
     unwatch = fb().watch(key(), function(remote){
-      if (!remote || saving) return;
-      var merged = merge(remote, state);
+      if (saving) return;
+      // remote가 비어 있어도(명단 초기화) 그대로 반영해야 한다
+      var merged = merge(remote || { date: viewDate, rosterTs: 0, items: [] }, state);
       if (JSON.stringify(merged) === JSON.stringify(state)) return;
       state = merged;
       if (!editing) render();
     });
   }
 
+  // Firebase는 빈 배열·빈 객체를 저장하지 않으므로 items가 사라져서 돌아올 수 있다.
+  function norm(d){
+    if (!d) return null;
+    return { date: d.date, rosterTs: d.rosterTs || 0, items: Array.isArray(d.items) ? d.items : [] };
+  }
+
   function merge(a, b){
+    a = norm(a); b = norm(b);
     if (!a) return b;
     if (!b) return a;
     var base  = (a.rosterTs||0) >= (b.rosterTs||0) ? a : b;
@@ -617,8 +628,7 @@ window.dispatchEvent(new Event('fb-ready'));
       var changed = JSON.stringify(merged) !== JSON.stringify(state);
       state = merged;
       if (changed && !editing) render();
-      setSync(true);
-    }).catch(function(){ setSync(false); });
+    }).catch(function(){});
   }
 
   var saveTimer = null;
@@ -635,23 +645,28 @@ window.dispatchEvent(new Event('fb-ready'));
       state = merged;
       return writeRemote(merged);
     }).then(function(){
-      saving = false; setSync(true); render();
+      saving = false; render();
       if (dirty) flush();
     }).catch(function(){
-      saving = false; setSync(false);
+      saving = false;
       toast('저장 실패 — 잠시 뒤 다시 시도합니다');
       setTimeout(flush, 3000);
     });
   }
 
+  // 연결 표시는 Firebase가 알려주는 실제 상태만 반영한다.
+  // 개별 읽기·쓰기 실패로는 켜지 않는다 — 잠깐 끊겼다 붙는 동안 계속 떠 있게 되므로.
+  var online = false;
   function setSync(ok){
+    if (ok !== undefined) online = ok;
     var box = document.getElementById('sync');
     var dot = document.getElementById('dot');
     var txt = document.getElementById('syncTxt');
-    if (ok && hasStore()){ box.classList.add('hide'); return; }
+    var ready = online && hasStore();
     box.classList.remove('hide');
-    dot.className = 'dot stale';
-    txt.textContent = '연결 안 됨';
+    box.className = 'sync' + (ready ? ' ok' : '');
+    dot.className = 'dot' + (ready ? '' : ' stale');
+    txt.textContent = ready ? '연결됨' : '연결 안 됨';
   }
 
   /* ---------- 렌더 ---------- */
@@ -1215,12 +1230,10 @@ window.dispatchEvent(new Event('fb-ready'));
     loadRemote().then(function(remote){
       state = (remote && remote.items) ? remote : { date: viewDate, rosterTs: 0, items: [] };
       render();
-      setSync(true);
       watchRemote();
     }).catch(function(){
       state = { date: viewDate, rosterTs: 0, items: [] };
       render();
-      setSync(false);
     });
   }
   var foldBtn = document.getElementById('foldBtn');
@@ -1294,22 +1307,27 @@ window.dispatchEvent(new Event('fb-ready'));
 
   /* ---------- 시작 ---------- */
   function boot(){
+    if (hasStore() && fb().onConnected && !boot._watched){
+      boot._watched = true;
+      fb().onConnected(function(ok){ setSync(ok); });
+    }
+    setSync(hasStore());
     purgeOld();
     loadRemote().then(function(remote){
       state = (remote && remote.items) ? remote : { date: viewDate, rosterTs: 0, items: [] };
       render();
-      setSync(true);
       watchRemote();
     }).catch(function(){
       state = { date: viewDate, rosterTs: 0, items: [] };
       render();
-      setSync(false);
     });
   }
 
   // 화면으로 돌아오면 한 번 확인 (실시간 수신은 watchRemote가 담당)
   document.addEventListener('visibilitychange', function(){
-    if (!document.hidden && state) sync();
+    if (document.hidden || !state) return;
+    sync();          // 즉시 최신 상태 확인
+    watchRemote();   // 백그라운드에서 끊겼을 수 있으니 실시간 수신도 다시 건다
   });
 
   // 시간대 자동 전환 + 영업일이 바뀌면 오늘로 복귀
