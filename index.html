@@ -288,7 +288,13 @@
   }
   .badbox.hide{display:none}
 
-  .btns{display:flex;gap:8px;margin-top:10px}
+  /* 명단이 길어져도 등록 버튼이 항상 화면 아래에 보이도록 */
+  .btns{
+    display:flex;gap:8px;margin-top:10px;
+    position:sticky;bottom:calc(104px + env(safe-area-inset-bottom));z-index:5;
+    background:var(--panel);
+    padding:9px 0 3px;
+  }
   .btn{
     flex:1;padding:13px 0;border-radius:11px;border:0;
     font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;
