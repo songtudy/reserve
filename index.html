@@ -289,12 +289,21 @@
   }
   .badbox.hide{display:none}
 
-  /* 명단이 길어져도 등록 버튼이 항상 화면 아래에 보이도록 */
+  /* 명단이 길어져도 등록 버튼이 항상 화면 아래에 보이도록 —
+     패널 폭 전체를 쓰는 바 형태라야 입력칸을 가리는 느낌이 안 난다 */
   .btns{
-    display:flex;gap:8px;margin-top:10px;
+    display:flex;gap:8px;
     position:sticky;bottom:calc(104px + env(safe-area-inset-bottom));z-index:5;
+    margin:10px -14px -14px;
+    padding:11px 14px 14px;
     background:var(--panel);
-    padding:9px 0 3px;
+    border-top:1px solid var(--line);
+    border-radius:0 0 var(--radius) var(--radius);
+  }
+  .btns::before{                       /* 바 위쪽을 부드럽게 */
+    content:'';position:absolute;left:0;right:0;top:-16px;height:16px;
+    background:linear-gradient(to top, var(--panel), rgba(22,27,34,0));
+    pointer-events:none;
   }
   .btn{
     flex:1;padding:13px 0;border-radius:11px;border:0;
