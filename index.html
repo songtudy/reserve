@@ -220,15 +220,15 @@
     -webkit-appearance:none;appearance:none;
   }
   .erow input:focus, .erow select:focus{outline:2px solid var(--wait);outline-offset:-1px}
-  .erow input[type="time"]{width:110px;text-align:center}
   .erow select{
-    width:82px;text-align:center;text-align-last:center;
+    text-align:center;text-align-last:center;
     background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
     background-position:calc(100% - 14px) 20px, calc(100% - 9px) 20px;
     background-size:5px 5px,5px 5px;background-repeat:no-repeat;
     padding-right:22px;
   }
-  .erow input[type="time"]::-webkit-date-and-time-value{text-align:center}
+  .erow #e-hour, .erow #e-min{width:64px}
+  .erow #e-pax{width:80px}
   .ebtn{display:flex;gap:6px;margin-top:7px}
   .ebtn button{
     flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--line);
@@ -770,7 +770,7 @@ window.dispatchEvent(new Event('fb-ready'));
       var byPax = {};
       slotPend.forEach(function(x){ byPax[x.pax] = (byPax[x.pax]||0) + 1; });
       ls.textContent = Object.keys(byPax).map(Number).sort(function(a,b){ return a-b; })
-        .map(function(p){ return p + '인×' + byPax[p]; }).join('  ');
+        .map(function(p){ return p + '인 ' + byPax[p] + '팀'; }).join(' · ');
     } else if (gap !== 0 && all.length){
       // 어제/내일 — 시간대 강조 대신 하루 총 팀수
       st.textContent = '';
@@ -922,15 +922,30 @@ window.dispatchEvent(new Event('fb-ready'));
       form.className = 'edit';
       var paxOpts = '';
       for (var pn = 1; pn <= 12; pn++) paxOpts += '<option value="' + pn + '">' + pn + '명</option>';
+      var hOpts = '';
+      for (var hh = 12; hh <= 20; hh++) hOpts += '<option value="' + pad(hh) + '">' + pad(hh) + '</option>';
+      var mOpts = '';
+      for (var mm = 0; mm < 60; mm += 5) mOpts += '<option value="' + pad(mm) + '">' + pad(mm) + '</option>';
       form.innerHTML = '<div class="erow">'
-        + '<label>시간<input type="time" id="e-time" step="300"></label>'
+        + '<label>시<select id="e-hour">' + hOpts + '</select></label>'
+        + '<label>분<select id="e-min">' + mOpts + '</select></label>'
         + '<label class="grow">이름<input type="text" id="e-name"></label>'
         + '<label>인원<select id="e-pax">' + paxOpts + '</select></label>'
         + '</div>'
         + '<div class="ebtn"><button type="button" id="e-ok">저장</button>'
         + '<button type="button" id="e-no">취소</button></div>';
       body.appendChild(form);
-      form.querySelector('#e-time').value = it.time;
+      // 영업시간 밖이거나 5분 단위가 아닌 예약이면 그 값도 목록에 넣어준다
+      var curH = it.time.slice(0,2), curM = it.time.slice(3,5);
+      var hSel = form.querySelector('#e-hour'), mSel = form.querySelector('#e-min');
+      function ensureOpt(sel, v){
+        if ([].some.call(sel.options, function(o){ return o.value === v; })) return;
+        var o = document.createElement('option');
+        o.value = v; o.textContent = v;
+        sel.insertBefore(o, sel.firstChild);
+      }
+      ensureOpt(hSel, curH); ensureOpt(mSel, curM);
+      hSel.value = curH; mSel.value = curM;
       form.querySelector('#e-name').value = it.name;
       var paxSel = form.querySelector('#e-pax');
       if (it.pax > 12){
@@ -943,7 +958,7 @@ window.dispatchEvent(new Event('fb-ready'));
       form.querySelector('#e-no').addEventListener('click', function(){ editing = null; render(); });
       form.querySelector('#e-ok').addEventListener('click', function(){
         applyEdit(it.id,
-          form.querySelector('#e-time').value,
+          form.querySelector('#e-hour').value + ':' + form.querySelector('#e-min').value,
           form.querySelector('#e-name').value,
           form.querySelector('#e-pax').value);
       });
@@ -965,8 +980,6 @@ window.dispatchEvent(new Event('fb-ready'));
       ed.addEventListener('click', function(e){
         e.stopPropagation();
         editing = it.id; openMenu = null; render();
-        var f = document.getElementById('e-time');
-        if (f) f.focus();
       });
       menu.appendChild(ed);
       var del = document.createElement('button');
