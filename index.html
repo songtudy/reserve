@@ -33,7 +33,7 @@
     font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,"Noto Sans KR",system-ui,sans-serif;
     font-size:16px;
     line-height:1.4;
-    padding:env(safe-area-inset-top) 0 96px;
+    padding:env(safe-area-inset-top) 0 calc(112px + env(safe-area-inset-bottom));
     -webkit-font-smoothing:antialiased;
   }
   .wrap{max-width:640px;margin:0 auto;padding:0 14px}
@@ -250,7 +250,7 @@
   /* paste panel */
   .panel{
     background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
-    padding:14px;margin-top:10px;
+    padding:14px;margin-top:10px;overflow:hidden;
   }
   .panel h2{margin:0 0 4px;font-size:16px;font-weight:700}
   .panel p{margin:0 0 10px;font-size:12.5px;color:var(--dim);line-height:1.5}
@@ -290,17 +290,7 @@
   }
   .badbox.hide{display:none}
 
-  /* 명단이 길어져도 등록 버튼이 항상 화면 아래에 보이도록 —
-     패널 폭 전체를 쓰는 바 형태라야 입력칸을 가리는 느낌이 안 난다 */
-  .btns{
-    display:flex;gap:8px;
-    position:sticky;bottom:calc(104px + env(safe-area-inset-bottom));z-index:5;
-    margin:10px -14px -14px;
-    padding:11px 14px 14px;
-    background:var(--panel);
-    border-top:1px solid var(--line);
-    border-radius:0 0 var(--radius) var(--radius);
-  }
+  .btns{display:flex;gap:8px;margin-top:12px}
   .btn{
     flex:1;padding:13px 0;border-radius:11px;border:0;
     font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;
@@ -1092,9 +1082,16 @@ window.dispatchEvent(new Event('fb-ready'));
   function esc(t){
     return t.replace(/[<>&]/g, function(c){ return { '<':'&lt;', '>':'&gt;', '&':'&amp;' }[c]; });
   }
+  // 입력칸은 화면 높이의 절반까지만 늘리고, 그 이상은 안에서 스크롤한다.
+  // 오버레이(오류 표시)도 같은 위치로 따라가야 줄이 어긋나지 않는다.
   function autoGrow(){
+    var cap = Math.max(200, Math.round(window.innerHeight * 0.46));
     taEl.style.height = 'auto';
-    taEl.style.height = Math.max(172, taEl.scrollHeight) + 'px';
+    var want = Math.max(172, taEl.scrollHeight);
+    var h = Math.min(want, cap);
+    taEl.style.height = h + 'px';
+    taEl.style.overflowY = (want > cap) ? 'auto' : 'hidden';
+    hl.scrollTop = taEl.scrollTop;
   }
   function clearBad(){
     marking = false;
@@ -1137,6 +1134,7 @@ window.dispatchEvent(new Event('fb-ready'));
     recheckTimer = setTimeout(function(){ recheck(true); }, 180);
   });
   // 입력칸을 벗어나면 치던 줄도 다시 검사한다
+  taEl.addEventListener('scroll', function(){ hl.scrollTop = taEl.scrollTop; });
   taEl.addEventListener('blur', function(){
     clearTimeout(recheckTimer);
     recheck(false);
