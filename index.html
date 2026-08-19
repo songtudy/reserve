@@ -29,6 +29,7 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:var(--ink)}
   html{min-height:100%}
+  body{min-height:100vh;min-height:100dvh}
   body{
     background:var(--ink);
     color:var(--text);
@@ -375,7 +376,7 @@
     <div class="toprow">
       <div class="nav">
         <button type="button" id="prevDay" aria-label="어제"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg></button>
-        <span class="date num" id="dateLabel">—</span>
+        <span class="date num" id="dateLabel"></span>
         <button type="button" id="nextDay" aria-label="내일"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L16 12 L9 19"/></svg></button>
       </div>
       <div class="tools">
@@ -388,9 +389,9 @@
         </button>
       </div>
     </div>
-    <div class="lead">
-      <span class="slottime num" id="slotTime">—</span>
-      <span class="slotlab">예약</span>
+    <div class="lead hide">
+      <span class="slottime num" id="slotTime"></span>
+      <span class="slotlab"></span>
       <span class="leadmain num" id="leadMain"></span>
       <span class="leadsub num" id="leadSub"></span>
     </div>
@@ -421,7 +422,7 @@
   <div class="empty hide" id="emptyMsg"></div>
 </div>
 
-<div class="foot">
+<div class="foot hide">
   <div class="inner">
     <div class="frow">
       <button id="refreshBtn">새로고침</button>
@@ -833,6 +834,10 @@ window.dispatchEvent(new Event('fb-ready'));
       return;
     }
     em.classList.add('hide');
+
+    // 다른 기기에서 명단이 들어오면 이쪽 붙여넣기 창은 닫는다.
+    // 단, 내가 직접 입력하던 중이면 건드리지 않는다.
+    if (!panel.classList.contains('hide') && !appendMode && !ta.value.trim()) closePaste();
 
     var openCount = 0;
     groups.forEach(function(g, idx){
