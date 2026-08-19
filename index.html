@@ -265,7 +265,7 @@
   }
   textarea{
     position:relative;z-index:1;
-    display:block;width:100%;min-height:172px;
+    display:block;width:100%;box-sizing:border-box;
     resize:none;overflow:hidden;
     background:transparent;color:var(--text);
     border-color:var(--line);
@@ -299,7 +299,7 @@
   .btn.primary{background:var(--wait);color:#221703}
   .btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
   .btn:active{filter:brightness(.9)}
-  textarea::placeholder{ color:#59636f }
+  textarea::placeholder{ color:#6b7784 }
 
   /* footer */
   .foot.hide{display:none}
@@ -407,7 +407,7 @@
     <p>양식에 맞게 붙여넣어 주세요.</p>
     <div class="tawrap">
       <div class="hl" id="hl" aria-hidden="true"></div>
-      <textarea id="ta" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" placeholder="14:00 임동현 2명&#10;15:00 김동현 4명 방문&#10;15:00 박동현 2명&#10;17:00 이동현 3명 취소&#10;19:00 송동현 5명"></textarea>
+      <textarea id="ta" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" placeholder="14:00 임동현 2명&#10;15:00 김동현 4명 방문&#10;15:00 박동현 2명&#10;17:00 Donghyun Lee 3명 취소&#10;19:00 송동현 5명"></textarea>
     </div>
     <div class="badbox hide" id="badBox"></div>
     <div class="btns">
@@ -1093,15 +1093,25 @@ window.dispatchEvent(new Event('fb-ready'));
   }
   // 입력칸은 화면 높이의 절반까지만 늘리고, 그 이상은 안에서 스크롤한다.
   // 오버레이(오류 표시)도 같은 위치로 따라가야 줄이 어긋나지 않는다.
+  // 입력칸 기본 높이 = 카드 위쪽(제목·안내)과 아래 버튼을 뺀 나머지.
+  // 명단이 없을 때 화면이 허전하지 않고, 등록 버튼이 하단 메뉴 근처에 오게 된다.
+  // 키보드가 올라올 자리를 남겨 버튼이 가려지지 않도록 여유를 둔다.
+  // 비어 있든 가득 차든 같은 높이 — 화면의 약 46%.
+  // 등록 버튼이 늘 같은 자리에 있고, 키보드가 올라올 공간도 남는다.
+  function taBaseHeight(){
+    var vh = window.innerHeight || 700;
+    return Math.max(260, Math.min(Math.round(vh * 0.46), 420));
+  }
   function autoGrow(){
-    var cap = Math.max(200, Math.round(window.innerHeight * 0.46));
-    taEl.style.height = 'auto';
-    var want = Math.max(172, taEl.scrollHeight);
-    var h = Math.min(want, cap);
+    var h = taBaseHeight();
     taEl.style.height = h + 'px';
-    taEl.style.overflowY = (want > cap) ? 'auto' : 'hidden';
+    taEl.style.overflowY = (taEl.scrollHeight > h + 2) ? 'auto' : 'hidden';
     hl.scrollTop = taEl.scrollTop;
   }
+  window.addEventListener('resize', function(){
+    var pnl = document.getElementById('pastePanel');
+    if (pnl && !pnl.classList.contains('hide')) autoGrow();
+  });
   function clearBad(){
     marking = false;
     badBox.classList.add('hide');
@@ -1346,7 +1356,7 @@ window.dispatchEvent(new Event('fb-ready'));
       }, 5000);
       return;
     }
-    if (!state){ toast('명단 없음'); return; }
+    if (!state){ toast('명단이 없습니다'); return; }
     sync().then(function(){ toast('최신 상태'); });
   });
 
@@ -1366,7 +1376,7 @@ window.dispatchEvent(new Event('fb-ready'));
 
   document.getElementById('copyBtn').addEventListener('click', function(){
     var txt = reportText();
-    if (!txt){ toast('복사할 명단이 없습니다'); return; }
+    if (!txt){ toast('명단이 없습니다'); return; }
     var done = function(){ toast(state.items.length + '건 복사됨'); };
     if (navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(txt).then(done).catch(function(){ fallbackCopy(txt, done); });
