@@ -1161,6 +1161,18 @@ window.dispatchEvent(new Event('fb-ready'));
   });
   // 입력칸을 벗어나면 치던 줄도 다시 검사한다
   taEl.addEventListener('scroll', function(){ hl.scrollTop = taEl.scrollTop; });
+
+  // 붙여넣으면 커서가 맨 끝으로 가면서 입력칸과 화면이 같이 밀려 올라간다.
+  // 명단은 위에서부터 확인하는 게 자연스러우니 처음으로 되돌린다.
+  taEl.addEventListener('paste', function(){
+    setTimeout(function(){
+      autoGrow();
+      try { taEl.setSelectionRange(0, 0); } catch(e){}
+      taEl.scrollTop = 0;
+      hl.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }, 0);
+  });
   taEl.addEventListener('blur', function(){
     clearTimeout(recheckTimer);
     recheck(false);
