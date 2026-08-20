@@ -4,28 +4,67 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0f1319">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" id="metaScheme" content="dark light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="익선취향">
+<script>
+// 화면이 그려지기 전에 테마를 정한다. 나중에 바꾸면 어두운 화면이 한 번 번쩍인다.
+(function(){
+  var t = 'dark';
+  try { if (localStorage.getItem('theme') === 'light') t = 'light'; } catch(e){}
+  var d = document.documentElement;
+  d.setAttribute('data-theme', t);
+  d.style.colorScheme = t;
+  var m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.content = (t === 'light') ? '#f4f6f9' : '#0f1319';
+  // 아이폰 앱 모드 상태바 — 밝은 테마에서 흰 글씨가 안 보인다
+  var b = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  if (b && t === 'light') b.content = 'default';
+})();
+</script>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <title>익선취향 예약 매니저</title>
 <style>
   :root{
-    --ink:#0f1319;
-    --panel:#161b22;
-    --panel2:#1c222b;
-    --line:#252c36;
-    --text:#f0f3f6;
-    --dim:#8792a0;
-    --wait:#e8b757;
-    --go:#5fb08a;
-    --off:#3d4653;
-    --warn:#c9736a;
-    --radius:14px;
+    /* 바탕 */
+    --ink:#0f1319;      --panel:#161b22;    --panel2:#1c222b;
+    --line:#252c36;     --press:#26313d;
+    --text:#f0f3f6;     --dim:#8792a0;      --off:#5a657a;
+    --ph:#7b8695;       --disTx:#626d7c;
+    --headBg:rgba(15,19,25,.96);
+    --scrim:rgba(6,9,13,.72);   --scrimLite:rgba(6,9,13,.6);
+    /* 대기 — 금색. 칠할 때와 글자일 때를 나눈다 (밝은 테마에서 대비가 달라서) */
+    --wait:#e8b757;     --waitTx:#e8b757;   --onWait:#241a05;   --mark:#463a13;
+    /* 방문 — 초록 */
+    --go:#5fb08a;       --goTx:#5fb08a;     --onGo:#08241a;
+    --goBg:#182e26;     --goLine:#2c4438;   --goTag:#234639;
+    --goTagTx:#8fd3b1;  --goName:#9fb3a9;
+    /* 취소·경고 — 붉은색 */
+    --warn:#c9736a;     --warnBg:#2a1f22;   --warnTag:#432e2e;  --warnTagTx:#e0a49d;
+    --warnName:#c9a49f; --warnPax:#bd918b;  --warnPaxBg:#392b2d;
+    /* 붙여넣기 오류 */
+    --errBg:#1e1618;    --errLine:#4a2e2c;  --errTx:#e0a49d;
+    --errRow:rgba(201,115,106,.16);
+  }
+  html[data-theme="light"]{
+    --ink:#f4f6f9;      --panel:#ffffff;    --panel2:#eef1f6;
+    --line:#dfe4ec;     --press:#e2e7ef;
+    --text:#161a20;     --dim:#5c6772;      --off:#a9b3c0;
+    --ph:#a3acb9;       --disTx:#a8b0bb;
+    --headBg:rgba(244,246,249,.96);
+    --scrim:rgba(20,26,34,.44); --scrimLite:rgba(20,26,34,.34);
+    --wait:#d99f2b;     --waitTx:#85590a;   --onWait:#2a1d02;   --mark:#fbe6b4;
+    --go:#2f9c6e;       --goTx:#1c7550;     --onGo:#ffffff;
+    --goBg:#eefaf3;     --goLine:#b9e3ce;   --goTag:#d9f2e5;
+    --goTagTx:#1a6e4b;  --goName:#4a6a5b;
+    --warn:#c0483c;     --warnBg:#fdf1ef;   --warnTag:#fadedb;  --warnTagTx:#964036;
+    --warnName:#79554f; --warnPax:#7a4f48;  --warnPaxBg:#f6e7e5;
+    --errBg:#fdf0ee;    --errLine:#f0c8c2;  --errTx:#9e4438;
+    --errRow:rgba(192,72,60,.12);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:var(--ink)}
@@ -64,15 +103,15 @@
   .nav button:active{background:var(--panel2)}
   .nav button:disabled{opacity:.22}
   .date{font-size:13.5px;color:var(--text);font-weight:650;letter-spacing:.01em;white-space:nowrap}
-  .offday .date{color:var(--wait);font-weight:700}
-  .offday .nav button{color:var(--wait)}
+  .offday .date{color:var(--waitTx);font-weight:700}
+  .offday .nav button{color:var(--waitTx)}
   .dayprog{
     display:flex;align-items:center;line-height:1;
     font-size:13.5px;font-weight:800;color:var(--text);
     background:var(--panel);border:1px solid var(--line);
     padding:4px 9px;border-radius:8px;
   }
-  .dayprog.full{color:var(--go);border-color:#26382f}
+  .dayprog.full{color:var(--goTx);border-color:var(--goLine)}
   .tools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .tools button.off{visibility:hidden;pointer-events:none}
   .tools button{
@@ -82,7 +121,7 @@
     color:var(--dim);cursor:pointer;margin-right:-8px;
   }
   .tools button:active{background:var(--panel2)}
-  .tools button.on{color:var(--wait);background:var(--panel2)}
+  .tools button.on{color:var(--waitTx);background:var(--panel2)}
   .sync{font-size:11.5px;color:var(--warn);display:flex;align-items:center;gap:5px;font-weight:600;line-height:1;height:38px}
   .sync.ok{color:var(--dim);font-weight:500}
   .dot{width:6px;height:6px;border-radius:50%;background:var(--go);opacity:.9}
@@ -93,9 +132,9 @@
   .lead > span{margin-right:9px}
   .lead.hide{display:none}
   .slotlab{font-size:11.5px;font-weight:700;letter-spacing:.08em;color:var(--dim)}
-  .slottime{font-size:22px;font-weight:800;color:var(--wait);letter-spacing:-.03em}
+  .slottime{font-size:22px;font-weight:800;color:var(--waitTx);letter-spacing:-.03em}
   .leadmain{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.02em}
-  .leadmain.done{font-size:16px;font-weight:650;color:var(--go)}
+  .leadmain.done{font-size:16px;font-weight:650;color:var(--goTx)}
   /* 인원 요약은 자리가 모자란 조각만 다음 줄로 내린다 */
   .leadsub{font-size:13.5px;font-weight:600;color:var(--dim);display:inline}
   .leadsub .pc{white-space:nowrap}
@@ -133,7 +172,7 @@
   }
   .searchbar button svg{display:block}
   .searchbar button:active{background:var(--panel2)}
-  mark{background:#463a13;color:var(--wait);-webkit-text-fill-color:var(--wait);border-radius:3px;padding:0 1px}
+  mark{background:var(--mark);color:var(--waitTx);-webkit-text-fill-color:var(--waitTx);border-radius:3px;padding:0 1px}
 
   /* time group */
   .group{margin-top:10px}
@@ -157,10 +196,10 @@
   .gmeta{font-size:12.5px;color:var(--dim);display:flex;align-items:center;gap:7px}
   .gmeta b{font-weight:800;color:var(--text)}
   .gbreak{color:var(--dim);font-size:11.5px}
-  .group.now .gtime{color:var(--wait)}
+  .group.now .gtime{color:var(--waitTx)}
   .group.now .row{border-left-color:var(--wait)}
   .group.done .gtime{opacity:.6}
-  .group.done .gmeta b{color:var(--go)}
+  .group.done .gmeta b{color:var(--goTx)}
 
   /* row */
   .row{
@@ -189,7 +228,7 @@
   .who{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
   .memo{
     margin-top:2px;font-size:12px;font-weight:600;line-height:1.3;
-    color:var(--wait);opacity:.85;text-align:left;
+    color:var(--waitTx);opacity:.85;text-align:left;
     word-break:break-all;
   }
   .row.arrived .memo, .row.cancelled .memo{color:var(--dim);opacity:1}
@@ -205,8 +244,8 @@
     font-size:11.5px;font-weight:800;letter-spacing:.04em;
     padding:4px 8px;border-radius:7px;flex:0 0 auto;white-space:nowrap;
   }
-  .tag.arrived{background:#1b2f27;color:#7fc9a5;-webkit-text-fill-color:#7fc9a5}
-  .tag.cancelled{background:#332323;color:#d2938c;-webkit-text-fill-color:#d2938c}
+  .tag.arrived{background:var(--goTag);color:var(--goTagTx);-webkit-text-fill-color:var(--goTagTx)}
+  .tag.cancelled{background:var(--warnTag);color:var(--warnTagTx);-webkit-text-fill-color:var(--warnTagTx)}
   .pax{
     font-size:15px;font-weight:750;color:var(--text);
     background:var(--panel2);border-radius:8px;padding:5px 9px;flex:0 0 auto;
@@ -219,14 +258,14 @@
   .more svg{display:block}
   .more:active{background:var(--panel2)}
 
-  .row.arrived{border-left-color:var(--go);background:#141d19}
-  .row.arrived .check{background:var(--go);border-color:var(--go);color:#08241a;-webkit-text-fill-color:#08241a}
-  .row.arrived .name{color:#94a49c;-webkit-text-fill-color:#94a49c;font-weight:600}
-  .row.arrived .pax{color:var(--go);-webkit-text-fill-color:var(--go)}
+  .row.arrived{border-left-color:var(--go);background:var(--goBg)}
+  .row.arrived .check{background:var(--go);border-color:var(--go);color:var(--onGo);-webkit-text-fill-color:var(--onGo)}
+  .row.arrived .name{color:var(--goName);-webkit-text-fill-color:var(--goName);font-weight:600}
+  .row.arrived .pax{color:var(--goTx);-webkit-text-fill-color:var(--goTx)}
 
-  .row.cancelled{border-left-color:var(--warn);background:#1a1618}
-  .row.cancelled .name{color:#b8938e;-webkit-text-fill-color:#b8938e;font-weight:600}
-  .row.cancelled .pax{color:#a8837e;-webkit-text-fill-color:#a8837e;background:#241c1d}
+  .row.cancelled{border-left-color:var(--warn);background:var(--warnBg)}
+  .row.cancelled .name{color:var(--warnName);-webkit-text-fill-color:var(--warnName);font-weight:600}
+  .row.cancelled .pax{color:var(--warnPax);-webkit-text-fill-color:var(--warnPax);background:var(--warnPaxBg)}
   .row.cancelled .check{
     border-color:var(--warn);
     color:var(--warn);-webkit-text-fill-color:var(--warn);
@@ -263,7 +302,7 @@
     flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--line);
     background:var(--panel2);color:var(--text);font-family:inherit;font-size:13.5px;font-weight:650;cursor:pointer;
   }
-  .ebtn #e-ok{background:var(--wait);color:#241a05;border-color:var(--wait)}
+  .ebtn #e-ok{background:var(--wait);color:var(--onWait);border-color:var(--wait)}
   .ebtn button:active{filter:brightness(.9)}
 
   .menu{display:flex;gap:6px;padding:0 10px 10px}
@@ -271,7 +310,7 @@
     flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--line);
     background:var(--panel2);color:var(--text);font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;
   }
-  .menu button:active{background:#26313d}
+  .menu button:active{background:var(--press)}
   .menu .del{color:var(--warn)}
 
   /* paste panel */
@@ -286,7 +325,7 @@
     padding-bottom:calc(env(safe-area-inset-bottom) + 16px);
   }
   .panel.asSheet.kb{ padding-bottom:14px }
-  .panelScrim{position:fixed;inset:0;z-index:70;background:rgba(6,9,13,.72)}
+  .panelScrim{position:fixed;inset:0;z-index:70;background:var(--scrim)}
   .panelScrim.hide{display:none}
   .panel{
     background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
@@ -319,14 +358,14 @@
   }
   .hl .ln{display:block;padding:0 11px 0 11px}
   .hl .ln.err{
-    background:rgba(201,115,106,.16);
+    background:var(--errRow);
     box-shadow:inset 3px 0 0 var(--warn);
   }
   textarea:focus{outline:2px solid var(--wait);outline-offset:-1px}
   .badbox{
     margin-top:9px;padding:9px 11px;
-    background:#1e1618;border:1px solid #4a2e2c;border-radius:9px;
-    font-size:13.5px;line-height:1.5;color:#e0a49d;font-weight:600;
+    background:var(--errBg);border:1px solid var(--errLine);border-radius:9px;
+    font-size:13.5px;line-height:1.5;color:var(--errTx);font-weight:600;
   }
   /* 오류가 사라져도 자리를 비워둔다 — 등록 버튼이 튀어오르면 오타 수정 중에 잘못 눌린다 */
   .badbox.off{visibility:hidden}
@@ -336,16 +375,16 @@
     flex:1;padding:13px 0;border-radius:11px;border:0;
     font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;
   }
-  .btn.primary{background:var(--wait);color:#221703}
+  .btn.primary{background:var(--wait);color:var(--onWait)}
   .btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
   .btn:active{filter:brightness(.9)}
-  textarea::placeholder{ color:#6b7784 }
+  textarea::placeholder{ color:var(--ph) }
 
   /* footer */
   .foot.hide{display:none}
   .foot{
     position:fixed;left:0;right:0;bottom:0;z-index:30;
-    background:rgba(15,19,25,.96);
+    background:var(--headBg);
     backdrop-filter:blur(10px);
     border-top:1px solid var(--line);
     padding:9px 14px calc(9px + env(safe-area-inset-bottom));
@@ -367,7 +406,7 @@
   .empty{text-align:center;color:var(--dim);font-size:13.5px;padding:36px 10px;line-height:1.7;white-space:pre-line}
   /* ---------- 메뉴 서랍 ---------- */
   .drawerScrim{
-    position:fixed;inset:0;z-index:60;background:rgba(6,9,13,.6);
+    position:fixed;inset:0;z-index:60;background:var(--scrimLite);
     opacity:1;transition:opacity .2s;
   }
   /* 전역 .hide는 display:none이라 페이드가 안 된다 — 서랍 막은 따로 둔다 */
@@ -393,13 +432,33 @@
   .dwday .d2{font-size:12.5px;font-variant-numeric:tabular-nums}
   .dwday.on{color:var(--text)}
   .dwday.on .d1{font-weight:800}
-  .dwday .tick{width:14px;flex:0 0 auto;color:var(--wait)}
+  .dwday .tick{width:14px;flex:0 0 auto;color:var(--waitTx)}
   .dwsep{height:1px;background:var(--line);margin:10px 18px}
   .dwitem{
+    display:flex;align-items:center;gap:8px;
     padding:13px 18px;border:0;background:none;cursor:pointer;
     color:var(--text);font-family:inherit;font-size:14.5px;font-weight:600;text-align:left;
   }
   .dwitem:active{background:var(--panel2)}
+  .dwval{margin-left:auto;font-size:13px;font-weight:600;color:var(--dim)}
+  .dwchev{flex:0 0 auto;color:var(--off);transition:transform .18s;margin-right:-2px}
+  .dwitem.open .dwchev{transform:rotate(90deg);color:var(--waitTx)}
+  /* 서랍 안에서 펼쳐지는 하위 목록 */
+  .dwsub{display:flex;flex-direction:column;background:var(--panel2)}
+  .dwsub button{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 18px;border:0;background:none;cursor:pointer;
+    color:var(--dim);font-family:inherit;font-size:14px;font-weight:600;text-align:left;
+  }
+  .dwsub button:active{background:var(--press)}
+  .dwsub button.on{color:var(--text)}
+  .dwsub .swatch{
+    width:17px;height:17px;flex:0 0 auto;border-radius:5px;border:1px solid var(--off);
+  }
+  .dwsub .swatch.dark{background:#0f1319}
+  .dwsub .swatch.light{background:#f4f6f9}
+  .dwsub .chk{margin-left:auto;color:var(--waitTx);font-weight:800;opacity:0}
+  .dwsub button.on .chk{opacity:1}
   .dwsep.push{margin-top:auto}
   .dwfoot{
     padding:12px 18px 0;
@@ -410,7 +469,7 @@
 
   /* ---------- 안내 시트 ---------- */
   .sheetScrim{
-    position:fixed;inset:0;z-index:70;background:rgba(6,9,13,.72);
+    position:fixed;inset:0;z-index:70;background:var(--scrim);
     display:flex;align-items:flex-end;justify-content:center;
   }
   .sheetScrim.hide{display:none}
@@ -440,8 +499,8 @@
     text-align:left;letter-spacing:-.02em;line-height:1.35;
   }
   .qa .qchev{margin-left:auto;flex:0 0 auto;color:var(--off);transition:transform .18s}
-  .qa.open .q{color:var(--wait)}
-  .qa.open .qchev{transform:rotate(90deg);color:var(--wait)}
+  .qa.open .q{color:var(--waitTx)}
+  .qa.open .qchev{transform:rotate(90deg);color:var(--waitTx)}
   .qa .a{
     display:none;padding:0 2px 15px;
     font-size:13.5px;line-height:1.7;color:var(--dim);white-space:pre-line;
@@ -462,8 +521,8 @@
   .plat.and{border-left-color:var(--go)}
   .plat .ph{display:flex;align-items:center;gap:7px;margin-bottom:10px}
   .plat .pn{font-size:14.5px;font-weight:800;letter-spacing:-.02em}
-  .plat.ios .pn{color:var(--wait)}
-  .plat.and .pn{color:var(--go)}
+  .plat.ios .pn{color:var(--waitTx)}
+  .plat.and .pn{color:var(--goTx)}
   .step{
     display:flex;align-items:center;gap:9px;
     padding:4.5px 0;font-size:13.5px;color:var(--dim);line-height:1.35;
@@ -481,7 +540,7 @@
     font-size:15px;font-weight:800;color:var(--text);line-height:1;
     vertical-align:-5px;
   }
-  .sheetNote{font-size:13px;line-height:1.6;color:var(--go);margin:0 0 14px;white-space:pre-line}
+  .sheetNote{font-size:13px;line-height:1.6;color:var(--goTx);margin:0 0 14px;white-space:pre-line}
   .sheetNote.plain{color:var(--dim)}
   .sheetClose{
     width:100%;padding:13px 0;margin-top:2px;border-radius:11px;
@@ -491,7 +550,7 @@
 
   .scrim{
     position:fixed;inset:0;z-index:50;
-    background:rgba(6,9,13,.72);
+    background:var(--scrim);
     display:grid;place-items:center;
     padding:22px 22px calc(22px + var(--kb, 0px));
   }
@@ -508,7 +567,7 @@
     padding:12px 13px;font-family:inherit;font-size:16px;font-weight:600;
     text-align:center;-webkit-appearance:none;appearance:none;
   }
-  .dialog input::placeholder{color:#4b5663;font-weight:400}
+  .dialog input::placeholder{color:var(--ph);font-weight:400}
   .dialog input:focus{outline:2px solid var(--wait);outline-offset:-1px}
   .dbtn{display:flex;gap:8px;margin-top:11px}
   .dbtn button{
@@ -516,8 +575,8 @@
     border:1px solid var(--line);background:var(--panel2);
     color:var(--text);font-family:inherit;font-size:15px;font-weight:650;cursor:pointer;
   }
-  .dbtn #dlgYes{background:var(--wait);color:#241a05;border-color:var(--wait)}
-  .dbtn #dlgYes:disabled{background:var(--panel2);color:#4f5a67;border-color:var(--line);cursor:default}
+  .dbtn #dlgYes{background:var(--wait);color:var(--onWait);border-color:var(--wait)}
+  .dbtn #dlgYes:disabled{background:var(--panel2);color:var(--disTx);border-color:var(--line);cursor:default}
   .dbtn button:active{filter:brightness(.9)}
 
   .toast{
@@ -591,7 +650,7 @@
         <label>인원<select id="a-pax"></select></label>
       </div>
       <div class="erow memorow">
-        <label class="grow">메모<input type="text" id="a-memo" autocomplete="off" placeholder="강아지 동반, 창가석 요청 …"></label>
+        <label class="grow">메모<input type="text" id="a-memo" autocomplete="off" placeholder="창가석 요청, 인플루언서 …"></label>
       </div>
     </div>
     <div class="btns">
@@ -623,6 +682,14 @@
   <div class="dwtitle">익선취향 예약 매니저</div>
   <div class="dwdays" id="dwDays"></div>
   <div class="dwsep"></div>
+  <button type="button" class="dwitem" id="themeBtn">테마 설정
+    <span class="dwval" id="themeVal"></span>
+    <span class="dwchev"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L16 12 L9 19"/></svg></span>
+  </button>
+  <div class="dwsub hide" id="themeSub">
+    <button type="button" data-theme-set="dark"><span class="swatch dark"></span>다크<span class="chk">✓</span></button>
+    <button type="button" data-theme-set="light"><span class="swatch light"></span>라이트<span class="chk">✓</span></button>
+  </div>
   <button type="button" class="dwitem" id="faqBtn">자주 묻는 질문</button>
   <button type="button" class="dwitem" id="installBtn">앱으로 설치하기</button>
   <div class="dwsep push"></div>
@@ -1168,7 +1235,7 @@ window.dispatchEvent(new Event('fb-ready'));
         + '<label>인원<select id="e-pax">' + paxOpts + '</select></label>'
         + '</div>'
         + '<div class="erow memorow">'
-        + '<label class="grow">메모<input type="text" id="e-memo" autocomplete="off" placeholder="강아지 동반, 창가석 요청 …"></label>'
+        + '<label class="grow">메모<input type="text" id="e-memo" autocomplete="off" placeholder="창가석 요청, 인플루언서 …"></label>'
         + '</div>'
         + '<div class="ebtn"><button type="button" id="e-ok">저장</button>'
         + '<button type="button" id="e-no">취소</button></div>';
@@ -1679,6 +1746,43 @@ window.dispatchEvent(new Event('fb-ready'));
     render();
   });
 
+  /* ---------- 테마 ---------- */
+  // 다크가 기본. 라이트를 고른 사람만 저장값이 남는다.
+  var THEME_KEY = 'theme';
+  var THEMES = { dark: '다크', light: '라이트' };
+
+  function theme(){
+    try { return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'; }
+    catch(e){ return 'dark'; }
+  }
+  function applyTheme(){
+    var t = theme();
+    var d = document.documentElement;
+    d.setAttribute('data-theme', t);
+    d.style.colorScheme = t;
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.content = (t === 'light') ? '#f4f6f9' : '#0f1319';
+    var v = document.getElementById('themeVal');
+    if (v) v.textContent = THEMES[t];
+    [].forEach.call(document.querySelectorAll('[data-theme-set]'), function(btn){
+      btn.classList.toggle('on', btn.getAttribute('data-theme-set') === t);
+    });
+  }
+  // 서랍 안에서 바로 고른다. 서랍을 열어둔 채라 바뀌는 색이 그 자리에서 보인다.
+  var themeBtn = document.getElementById('themeBtn');
+  var themeSub = document.getElementById('themeSub');
+  themeBtn.addEventListener('click', function(){
+    var open = themeSub.classList.toggle('hide');
+    themeBtn.classList.toggle('open', !open);
+  });
+  [].forEach.call(themeSub.querySelectorAll('[data-theme-set]'), function(btn){
+    btn.addEventListener('click', function(){
+      try { localStorage.setItem(THEME_KEY, btn.getAttribute('data-theme-set')); } catch(e){}
+      applyTheme();
+    });
+  });
+  applyTheme();
+
   /* ---------- 메뉴 서랍 ---------- */
   var drawer = document.getElementById('drawer');
   var drawerScrim = document.getElementById('drawerScrim');
@@ -1686,6 +1790,8 @@ window.dispatchEvent(new Event('fb-ready'));
   function hideDrawer(){
     drawer.classList.remove('open');
     drawerScrim.classList.add('off');
+    var sub = document.getElementById('themeSub');
+    if (sub){ sub.classList.add('hide'); document.getElementById('themeBtn').classList.remove('open'); }
   }
   function openDrawer(){
     renderDrawerDays();
@@ -1694,6 +1800,40 @@ window.dispatchEvent(new Event('fb-ready'));
     backOpen(hideDrawer);
   }
   function closeDrawer(){ hideDrawer(); backDone(); }
+
+  // 왼쪽으로 밀어서 닫기. 세로로 그으면 목록 스크롤이므로 손대지 않는다.
+  (function swipeClose(){
+    var x0 = 0, y0 = 0, dx = 0, w = 0, axis = null, dragging = false;
+    drawer.addEventListener('touchstart', function(e){
+      if (!drawer.classList.contains('open') || e.touches.length !== 1) return;
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+      dx = 0; axis = null; dragging = true; w = drawer.offsetWidth || 1;
+      drawer.style.transition = 'none';
+    }, { passive: true });
+    drawer.addEventListener('touchmove', function(e){
+      if (!dragging) return;
+      var mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+      if (!axis){
+        if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+        axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y';
+        if (axis === 'y'){ endDrag(false); return; }
+      }
+      dx = Math.min(0, mx);                       // 오른쪽으로는 안 끌린다
+      drawer.style.transform = 'translateX(' + dx + 'px)';
+      drawerScrim.style.opacity = String(Math.max(0, 1 + dx / w));
+    }, { passive: true });
+    function endDrag(commit){
+      dragging = false; axis = null;
+      drawer.style.transition = '';
+      if (commit) closeDrawer();
+      drawer.style.transform = '';
+      drawerScrim.style.opacity = '';
+    }
+    drawer.addEventListener('touchend', function(){
+      if (dragging) endDrag(dx < -Math.min(70, w * 0.3));
+    });
+    drawer.addEventListener('touchcancel', function(){ if (dragging) endDrag(false); });
+  })();
   document.getElementById('menuBtn').addEventListener('click', openDrawer);
   drawerScrim.addEventListener('click', closeDrawer);
 
@@ -1758,7 +1898,7 @@ window.dispatchEvent(new Event('fb-ready'));
   var FAQ = [
     ['메모는 어떻게 다나요?', 1,
       '예약 추가할 때 <em>메모</em> 칸에 적거나, 이름 오른쪽 ⋯ → <em>수정</em>에서 넣습니다.\n'
-      + '강아지 동반, 창가석 요청, 인플루언서처럼 짧게.\n'
+      + '창가석 요청, 인플루언서, 강아지 동반처럼 짧게.\n'
       + '이름 아래에 노란 글씨로 보이고, 명단 복사에도 괄호로 함께 나갑니다.'],
     ['예약을 잘못 넣었어요', 0,
       '이름 오른쪽 ⋯ 을 누르면 <em>방문 · 취소 · 수정 · 삭제</em>가 나옵니다.\n'
