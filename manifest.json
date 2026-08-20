@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "익선취향 예약 매니저",
-  "short_name": "익선취향",
-  "description": "매장 예약 명단 체크 보드",
+  "name": "익순이 (익선취향 예약 매니저)",
+  "short_name": "익순이",
+  "description": "익선취향 예약 명단 체크 보드",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

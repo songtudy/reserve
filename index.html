@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="익선취향">
+<meta name="apple-mobile-web-app-title" content="익순이">
 <script>
 // 화면이 그려지기 전에 테마를 정한다. 나중에 바꾸면 어두운 화면이 한 번 번쩍인다.
 (function(){
@@ -27,9 +27,10 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<title>익선취향 예약 매니저</title>
+<title>익순이</title>
 <style>
   :root{
+    --radius:14px;
     /* 바탕 */
     --ink:#0f1319;      --panel:#161b22;    --panel2:#1c222b;
     --line:#252c36;     --press:#26313d;
@@ -41,11 +42,11 @@
     --wait:#e8b757;     --waitTx:#e8b757;   --onWait:#241a05;   --mark:#463a13;
     /* 방문 — 초록 */
     --go:#5fb08a;       --goTx:#5fb08a;     --onGo:#08241a;
-    --goBg:#182e26;     --goLine:#2c4438;   --goTag:#234639;
-    --goTagTx:#8fd3b1;  --goName:#9fb3a9;
+    --goBg:#141d19;     --goLine:#26382f;   --goTag:#1b2f27;
+    --goTagTx:#7fc9a5;  --goName:#94a49c;
     /* 취소·경고 — 붉은색 */
-    --warn:#c9736a;     --warnBg:#2a1f22;   --warnTag:#432e2e;  --warnTagTx:#e0a49d;
-    --warnName:#c9a49f; --warnPax:#bd918b;  --warnPaxBg:#392b2d;
+    --warn:#c9736a;     --warnBg:#1a1618;   --warnTag:#332323;  --warnTagTx:#d2938c;
+    --warnName:#b8938e; --warnPax:#a8837e;  --warnPaxBg:#241c1d;
     /* 붙여넣기 오류 */
     --errBg:#1e1618;    --errLine:#4a2e2c;  --errTx:#e0a49d;
     --errRow:rgba(201,115,106,.16);
@@ -69,7 +70,8 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:var(--ink)}
   html{min-height:100%}
-  body{min-height:100vh;min-height:100dvh}
+  html{overscroll-behavior:none}
+  body{min-height:100vh;min-height:100dvh;overscroll-behavior:none}
   body{
     background:var(--ink);
     color:var(--text);
@@ -420,7 +422,14 @@
     display:flex;flex-direction:column;overflow-y:auto;
   }
   .drawer.open{transform:translateX(0)}
-  .dwtitle{padding:0 18px 14px;font-size:17px;font-weight:800;letter-spacing:-.02em}
+  .dwtitle{display:flex;align-items:center;gap:11px;padding:0 18px 16px}
+  .dwico{
+    width:36px;height:36px;flex:0 0 auto;border-radius:10px;
+    border:1px solid var(--line);background:var(--panel2);
+  }
+  .dwnames{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .dwname{font-size:18px;font-weight:800;letter-spacing:-.02em}
+  .dwsubtitle{font-size:12px;font-weight:600;color:var(--dim)}
   .dwdays{display:flex;flex-direction:column}
   .dwday{
     display:flex;align-items:center;gap:10px;
@@ -452,11 +461,15 @@
   }
   .dwsub button:active{background:var(--press)}
   .dwsub button.on{color:var(--text)}
-  .dwsub .swatch{
-    width:17px;height:17px;flex:0 0 auto;border-radius:5px;border:1px solid var(--off);
+  /* 달 / 해 — 두 줄이 한눈에 갈리게 */
+  .dwsub .tico{
+    width:27px;height:27px;flex:0 0 auto;display:grid;place-items:center;
+    border-radius:9px;border:1px solid var(--line);
+    background:var(--panel);color:var(--off);
   }
-  .dwsub .swatch.dark{background:#0f1319}
-  .dwsub .swatch.light{background:#f4f6f9}
+  .dwsub button.on{background:var(--panel);color:var(--text);font-weight:700}
+  .dwsub button.on .tico{background:var(--mark);border-color:transparent;color:var(--waitTx)}
+  .dwsub button.on{box-shadow:inset 3px 0 0 var(--wait)}
   .dwsub .chk{margin-left:auto;color:var(--waitTx);font-weight:800;opacity:0}
   .dwsub button.on .chk{opacity:1}
   .dwsep.push{margin-top:auto}
@@ -542,6 +555,9 @@
   }
   .sheetNote{font-size:13px;line-height:1.6;color:var(--goTx);margin:0 0 14px;white-space:pre-line}
   .sheetNote.plain{color:var(--dim)}
+  .about{font-size:14px;line-height:1.75;color:var(--dim);margin:0 0 12px}
+  .about:last-of-type{margin-bottom:16px}
+  .about b{color:var(--text);font-weight:700}
   .sheetClose{
     width:100%;padding:13px 0;margin-top:2px;border-radius:11px;
     border:1px solid var(--line);background:var(--panel2);
@@ -679,7 +695,10 @@
 <div class="panelScrim hide" id="panelScrim"></div>
 <div class="drawerScrim off" id="drawerScrim"></div>
 <aside class="drawer" id="drawer" aria-label="메뉴">
-  <div class="dwtitle">익선취향 예약 매니저</div>
+  <div class="dwtitle">
+    <img class="dwico" src="apple-touch-icon.png" alt="" width="36" height="36">
+    <span class="dwnames"><span class="dwname">익순이</span><span class="dwsubtitle">익선취향 예약 매니저</span></span>
+  </div>
   <div class="dwdays" id="dwDays"></div>
   <div class="dwsep"></div>
   <button type="button" class="dwitem" id="themeBtn">테마 설정
@@ -687,9 +706,10 @@
     <span class="dwchev"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L16 12 L9 19"/></svg></span>
   </button>
   <div class="dwsub hide" id="themeSub">
-    <button type="button" data-theme-set="dark"><span class="swatch dark"></span>다크<span class="chk">✓</span></button>
-    <button type="button" data-theme-set="light"><span class="swatch light"></span>라이트<span class="chk">✓</span></button>
+    <button type="button" data-theme-set="dark"><span class="tico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.4A8.5 8.5 0 1 1 9.6 4a7 7 0 0 0 10.4 10.4Z"/></svg></span>다크<span class="chk">✓</span></button>
+    <button type="button" data-theme-set="light"><span class="tico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2.1M12 18.9V21M3 12h2.1M18.9 12H21M5.6 5.6l1.5 1.5M16.9 16.9l1.5 1.5M18.4 5.6l-1.5 1.5M7.1 16.9l-1.5 1.5"/></svg></span>라이트<span class="chk">✓</span></button>
   </div>
+  <button type="button" class="dwitem" id="aboutBtn">익순이란?</button>
   <button type="button" class="dwitem" id="faqBtn">자주 묻는 질문</button>
   <button type="button" class="dwitem" id="installBtn">앱으로 설치하기</button>
   <div class="dwsep push"></div>
@@ -1746,6 +1766,25 @@ window.dispatchEvent(new Event('fb-ready'));
     render();
   });
 
+  /* ---------- 앱 복귀 ---------- */
+  // 아이폰에서 앱 전환 후 돌아오면 하단 바 같은 고정 요소가 엉뚱한 자리에 남아 있곤 한다.
+  // 레이아웃을 한 번 다시 계산하게 만들어 제자리로 돌려놓는다.
+  function repaintFixed(){
+    document.documentElement.style.setProperty('--kb', '0px');
+    var y = window.pageYOffset || 0;
+    [].forEach.call(document.querySelectorAll('.foot, header'), function(el){
+      var keep = el.style.display;
+      el.style.display = 'none';
+      void el.offsetHeight;          // 강제 리플로우
+      el.style.display = keep;
+    });
+    window.scrollTo(0, y);
+  }
+  window.addEventListener('pageshow', repaintFixed);
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden) setTimeout(repaintFixed, 60);
+  });
+
   /* ---------- 테마 ---------- */
   // 다크가 기본. 라이트를 고른 사람만 저장값이 남는다.
   var THEME_KEY = 'theme';
@@ -1968,13 +2007,23 @@ window.dispatchEvent(new Event('fb-ready'));
         '<b>설치</b>'
       ]);
   }
+  var INSTALL_NOTE = '<p class="sheetNote plain" style="margin:-4px 0 14px">'
+    + '익선취향 예약 매니저 「익순이」는 홈 화면 앱에 최적화되어 있습니다.</p>';
+
   document.getElementById('installBtn').addEventListener('click', function(){
     hideDrawer();
-    if (isStandalone()){
-      openSheet('앱으로 설치하기', '<p class="sheetNote">이미 앱으로 실행 중입니다.</p>');
-      return;
-    }
-    openSheet('앱으로 설치하기', installHtml());
+    openSheet('앱으로 설치하기', INSTALL_NOTE + installHtml());
+  });
+
+  // 4) 앱 소개
+  document.getElementById('aboutBtn').addEventListener('click', function(){
+    hideDrawer();
+    openSheet('익순이란?',
+      '<p class="about">익선취향 예약자 관리 앱입니다.</p>'
+      + '<p class="about">누가 체크하든 <b>모든 직원 화면에 바로 반영</b>됩니다. '
+      + '한 명이 손님을 받으면 나머지 사람 화면에서도 곧바로 체크된 것으로 보입니다.</p>'
+      + '<p class="about">아래 <b>명단 복사</b>를 누르면 단톡방에 올리던 양식 그대로 복사됩니다. '
+      + '붙여넣기만 하면 됩니다.</p>');
   });
 
   // 브라우저로 처음 들어온 사람에게 한 번 권한다
@@ -1987,8 +2036,7 @@ window.dispatchEvent(new Event('fb-ready'));
     setTimeout(function(){
       if (!sheetScrim.classList.contains('hide')) return;   // 다른 안내가 떠 있으면 건너뛴다
       openSheet('앱으로 설치하기',
-        '<p class="sheetNote plain" style="margin:-4px 0 14px">「익선취향 예약 매니저」는 홈 화면 앱에 최적화되어 있습니다.</p>'
-        + installHtml());
+        INSTALL_NOTE + installHtml());
       sheetNever.classList.remove('hide');
     }, 1200);
   }
