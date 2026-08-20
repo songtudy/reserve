@@ -37,7 +37,7 @@
     font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,"Noto Sans KR",system-ui,sans-serif;
     font-size:16px;
     line-height:1.4;
-    padding:env(safe-area-inset-top) 0 calc(112px + env(safe-area-inset-bottom));
+    padding:0 0 calc(112px + env(safe-area-inset-bottom));
     -webkit-font-smoothing:antialiased;
   }
   .wrap{max-width:640px;margin:0 auto;padding:0 14px}
@@ -45,10 +45,10 @@
 
   /* header */
   header{
-    position:sticky;top:env(safe-area-inset-top);z-index:20;
+    position:sticky;top:0;z-index:20;
     background:var(--ink);
     border-bottom:1px solid var(--line);
-    padding:10px 0 8px;
+    padding:calc(env(safe-area-inset-top) + 10px) 0 8px;
   }
   .toprow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px}
   .nav{display:flex;align-items:center;gap:0;margin-left:-10px}
@@ -92,7 +92,9 @@
   .slottime{font-size:22px;font-weight:800;color:var(--wait);letter-spacing:-.03em}
   .leadmain{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.02em}
   .leadmain.done{font-size:16px;font-weight:650;color:var(--go)}
-  .leadsub{font-size:13.5px;font-weight:600;color:var(--dim)}
+  .leadsub{font-size:13.5px;font-weight:600;color:var(--dim);display:inline}
+  .leadsub .pc{white-space:nowrap}
+  .leadsub .pcsep{color:var(--off)}
 
   /* search */
   .searchbar{position:relative;margin-top:12px}
@@ -253,6 +255,15 @@
   .menu .del{color:var(--warn)}
 
   /* paste panel */
+  .panel.asSheet{
+    position:fixed;left:50%;bottom:0;transform:translateX(-50%);
+    z-index:71;width:100%;max-width:520px;margin:0;
+    border-radius:18px 18px 0 0;border-bottom:0;
+    max-height:86vh;overflow-y:auto;
+    padding-bottom:calc(env(safe-area-inset-bottom) + 16px);
+  }
+  .panelScrim{position:fixed;inset:0;z-index:70;background:rgba(6,9,13,.72)}
+  .panelScrim.hide{display:none}
   .panel{
     background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px;margin-top:10px;overflow:hidden;
@@ -337,7 +348,7 @@
   .drawerScrim.hide{opacity:0;pointer-events:none}
   .drawer{
     position:fixed;top:0;left:0;bottom:0;z-index:61;
-    width:min(78vw, 300px);
+    width:min(68vw, 258px);
     background:var(--panel);border-right:1px solid var(--line);
     padding:calc(env(safe-area-inset-top) + 18px) 0 calc(env(safe-area-inset-bottom) + 14px);
     transform:translateX(-101%);transition:transform .22s ease;
@@ -364,7 +375,7 @@
   }
   .dwitem:active{background:var(--panel2)}
   .dwfoot{
-    margin-top:auto;padding:12px 18px 0;
+    padding:12px 18px 0;
     font-size:12.5px;font-weight:600;color:var(--dim);
     display:flex;align-items:center;gap:6px;
   }
@@ -451,7 +462,7 @@
       <div class="tools">
         <span class="dayprog num hide" id="dayProg"></span>
         <div class="sync" id="sync"><span class="dot stale" id="dot"></span><span id="syncTxt">연결 안 됨</span></div>
-        <button type="button" id="searchBtn" aria-label="이름 검색">
+        <button type="button" id="searchBtn" class="off" aria-label="이름 검색">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 L21 21"/>
           </svg>
@@ -505,6 +516,7 @@
   </div>
 </div>
 
+<div class="panelScrim hide" id="panelScrim"></div>
 <div class="drawerScrim hide" id="drawerScrim"></div>
 <aside class="drawer" id="drawer" aria-label="메뉴">
   <div class="dwtitle">익선취향</div>
@@ -779,8 +791,7 @@ window.dispatchEvent(new Event('fb-ready'));
     var dot = document.getElementById('dot');
     var txt = document.getElementById('syncTxt');
     var ready = online && hasStore();
-    box.classList.remove('hide');
-    box.className = 'sync' + (ready ? ' ok' : '');
+    box.className = 'sync' + (ready ? ' hide' : '');
     dot.className = 'dot' + (ready ? '' : ' stale');
     txt.textContent = ready ? '연결됨' : '연결 안 됨';
     var cf = document.getElementById('dwConn');
@@ -871,8 +882,9 @@ window.dispatchEvent(new Event('fb-ready'));
       lm.textContent = slotPend.length + '팀';
       var byPax = {};
       slotPend.forEach(function(x){ byPax[x.pax] = (byPax[x.pax]||0) + 1; });
-      ls.textContent = Object.keys(byPax).map(Number).sort(function(a,b){ return a-b; })
-        .map(function(p){ return p + '인 ' + byPax[p] + '팀'; }).join(' · ');
+      ls.innerHTML = Object.keys(byPax).map(Number).sort(function(a,b){ return a-b; })
+        .map(function(p){ return '<span class="pc">' + p + '인 ' + byPax[p] + '팀</span>'; })
+        .join('<span class="pcsep"> · </span>');
     } else if (gap !== 0 && all.length){
       // 어제/내일 — 시간대 강조 대신 하루 총 팀수
       st.textContent = '';
@@ -1263,7 +1275,7 @@ window.dispatchEvent(new Event('fb-ready'));
       try { taEl.setSelectionRange(0, 0); } catch(e){}
       taEl.scrollTop = 0;
       hl.scrollTop = 0;
-      window.scrollTo(0, 0);
+      if (!panel.classList.contains('asSheet')) window.scrollTo(0, 0);
     }, 0);
   });
   taEl.addEventListener('blur', function(){
@@ -1305,6 +1317,8 @@ window.dispatchEvent(new Event('fb-ready'));
 
   /* ---------- UI 연결 ---------- */
   var panel = document.getElementById('pastePanel');
+  var panelScrim = document.getElementById('panelScrim');
+  panelScrim.addEventListener('click', closePaste);
   var ta = document.getElementById('ta');
   var appendMode = false;
 
@@ -1318,13 +1332,21 @@ window.dispatchEvent(new Event('fb-ready'));
     document.getElementById('cancelPaste').classList.toggle('hide', !hasItems);
     ta.value = '';
     clearBad();
+    // 「예약 추가」는 별도 팝업으로 띄운다 (본문 흐름을 건드리지 않게)
+    panel.classList.toggle('asSheet', !!append);
+    panelScrim.classList.toggle('hide', !append);
     autoGrow();
     panel.classList.remove('hide');
     if (silent) return;
-    panel.scrollIntoView({behavior:'smooth', block:'center'});
+    if (!append) panel.scrollIntoView({behavior:'smooth', block:'center'});
     setTimeout(function(){ ta.focus(); }, 200);
   }
-  function closePaste(){ panel.classList.add('hide'); }
+  function closePaste(){
+    panel.classList.add('hide');
+    panel.classList.remove('asSheet');
+    panelScrim.classList.add('hide');
+    appendMode = false;
+  }
 
   var scrim = document.getElementById('scrim');
   function confirmDlg(title, onYes){
@@ -1435,6 +1457,7 @@ window.dispatchEvent(new Event('fb-ready'));
   var foldBtn = document.getElementById('foldBtn');
   foldBtn.addEventListener('click', function(){
     if (!state || !state.items.length) return;
+    if (!panel.classList.contains('hide')) closePaste();
     var times = {}, anyOpen = false;
     state.items.forEach(function(it){
       if (times[it.time] !== undefined) return;
@@ -1545,10 +1568,8 @@ window.dispatchEvent(new Event('fb-ready'));
     openSheet('앱으로 설치하기',
       '<div class="howto"><div class="h">아이폰 · 사파리</div>'
       + '<div class="s">하단 <b>⋯</b> → <b>공유</b> → <b>홈 화면에 추가</b></div></div>'
-      + '<div class="howto"><div class="h">갤럭시 · 삼성 인터넷</div>'
-      + '<div class="s">하단 <b>≡</b> → <b>현재 페이지 추가</b> → <b>홈 화면</b></div></div>'
       + '<div class="howto"><div class="h">갤럭시 · 크롬</div>'
-      + '<div class="s">우측 위 <b>⋮</b> → <b>홈 화면에 추가</b></div></div>');
+      + '<div class="s">우측 위 <b>⋮</b> → <b>설치 및 바로가기 만들기</b> → <b>설치</b></div></div>');
   });
 
   function reloadPage(){ try { window.location.reload(); } catch(e){} }
