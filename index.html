@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<title>익선취향</title>
+<title>익선취향 예약 매니저</title>
 <style>
   :root{
     --ink:#0f1319;
@@ -328,7 +328,8 @@
     background:#1e1618;border:1px solid #4a2e2c;border-radius:9px;
     font-size:13.5px;line-height:1.5;color:#e0a49d;font-weight:600;
   }
-  .badbox.hide{display:none}
+  /* 오류가 사라져도 자리를 비워둔다 — 등록 버튼이 튀어오르면 오타 수정 중에 잘못 눌린다 */
+  .badbox.off{visibility:hidden}
 
   .btns{display:flex;gap:8px;margin-top:12px}
   .btn{
@@ -429,9 +430,28 @@
     color:var(--dim);font-family:inherit;font-size:14.5px;font-weight:600;cursor:pointer;
   }
   .sheetNever:active{color:var(--text)}
-  .qa{margin:0 0 18px}
-  .qa .q{font-size:14.5px;font-weight:700;color:var(--wait);margin-bottom:6px}
-  .qa .a{font-size:14px;line-height:1.65;color:var(--dim);white-space:pre-line}
+  .faq{margin:-6px 0 14px}
+  .qa{border-bottom:1px solid var(--line)}
+  .qa:last-child{border-bottom:0}
+  .qa .q{
+    display:flex;align-items:center;gap:8px;width:100%;
+    padding:14px 2px;background:none;border:0;cursor:pointer;
+    font-family:inherit;font-size:14.5px;font-weight:700;color:var(--text);
+    text-align:left;letter-spacing:-.02em;line-height:1.35;
+  }
+  .qa .qchev{margin-left:auto;flex:0 0 auto;color:var(--off);transition:transform .18s}
+  .qa.open .q{color:var(--wait)}
+  .qa.open .qchev{transform:rotate(90deg);color:var(--wait)}
+  .qa .a{
+    display:none;padding:0 2px 15px;
+    font-size:13.5px;line-height:1.7;color:var(--dim);white-space:pre-line;
+  }
+  .qa.open .a{display:block}
+  .qa .a em{font-style:normal;color:var(--text);font-weight:600}
+  .qnew{
+    flex:0 0 auto;font-size:10px;font-weight:800;color:var(--ink);
+    background:var(--go);padding:2px 5px;border-radius:4px;letter-spacing:.02em;
+  }
   /* 설치 안내 — 기기별 카드 */
   .plat{
     background:var(--panel2);border:1px solid var(--line);
@@ -444,12 +464,6 @@
   .plat .pn{font-size:14.5px;font-weight:800;letter-spacing:-.02em}
   .plat.ios .pn{color:var(--wait)}
   .plat.and .pn{color:var(--go)}
-  .plat .me{
-    font-size:10.5px;font-weight:800;color:var(--ink);
-    padding:2px 6px;border-radius:5px;letter-spacing:.02em;line-height:1.5;
-  }
-  .plat.ios .me{background:var(--wait)}
-  .plat.and .me{background:var(--go)}
   .step{
     display:flex;align-items:center;gap:9px;
     padding:4.5px 0;font-size:13.5px;color:var(--dim);line-height:1.35;
@@ -467,12 +481,8 @@
     font-size:15px;font-weight:800;color:var(--text);line-height:1;
     vertical-align:-5px;
   }
-  .sheetWarn{
-    font-size:12.5px;line-height:1.6;color:var(--dim);
-    border-top:1px solid var(--line);padding-top:11px;margin:14px 0 12px;
-  }
-  .sheetWarn b{color:var(--warn);font-weight:700}
-  .sheetNote{font-size:13px;line-height:1.6;color:var(--go);margin:0 0 14px}
+  .sheetNote{font-size:13px;line-height:1.6;color:var(--go);margin:0 0 14px;white-space:pre-line}
+  .sheetNote.plain{color:var(--dim)}
   .sheetClose{
     width:100%;padding:13px 0;margin-top:2px;border-radius:11px;
     border:1px solid var(--line);background:var(--panel2);
@@ -559,12 +569,12 @@
 
   <div class="panel hide" id="pastePanel">
     <h2 id="pasteTitle">오늘 예약 명단 붙여넣기</h2>
-    <p id="pasteHint">양식에 맞게 붙여넣어 주세요.</p>
+    <p>양식에 맞게 붙여넣어 주세요.</p>
     <div class="tawrap">
       <div class="hl" id="hl" aria-hidden="true"></div>
       <textarea id="ta" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" placeholder="14:00 임동현 2명&#10;15:00 김동현 4명 방문&#10;15:00 박동현 2명&#10;17:00 Donghyun Lee 3명 취소&#10;19:00 송동현 5명"></textarea>
     </div>
-    <div class="badbox hide" id="badBox"></div>
+    <div class="badbox off" id="badBox">&nbsp;</div>
     <div class="btns">
       <button class="btn primary" id="loadBtn">명단 등록</button>
       <button class="btn ghost hide" id="cancelPaste">취소</button>
@@ -610,7 +620,7 @@
 <div class="panelScrim hide" id="panelScrim"></div>
 <div class="drawerScrim off" id="drawerScrim"></div>
 <aside class="drawer" id="drawer" aria-label="메뉴">
-  <div class="dwtitle">익선취향</div>
+  <div class="dwtitle">익선취향 예약 매니저</div>
   <div class="dwdays" id="dwDays"></div>
   <div class="dwsep"></div>
   <button type="button" class="dwitem" id="faqBtn">자주 묻는 질문</button>
@@ -693,19 +703,19 @@ window.dispatchEvent(new Event('fb-ready'));
   var COLLAPSE_DELAY = 3000;
   var query = '';
 
-  // 자동 접힘: 남은 팀이 없고 + 그 시간대가 이미 지났을 때.
-  // 단, 방금 체크한 직후에는 눈앞에서 접히지 않도록 잠깐 열어둔다.
-  // collapsed[time] = { v: 접힘여부, done: 그때 이 시간대가 끝난 상태였나 }
-  // 손으로 접은 건 계속 유지.
-  // 손으로 편 건 유지하되, 그 뒤에 시간대가 "끝남"으로 바뀌면 자동 정리에 넘긴다.
-  function isCollapsed(time, pendCount, live){
-    var done = (pendCount === 0 && !live);
+  // 접힘 규칙은 하나뿐이다 — 대기 중인 팀이 있으면 펼침, 없으면 접힘.
+  // 시계는 관여하지 않는다. 보고 있는데 시간이 지났다는 이유로 접히면 곤란하니까.
+  // 손으로 접거나 편 것은 그대로 두되, 대기 여부가 바뀌면 기본 규칙으로 돌아간다.
+  // collapsed[time] = { v: 접힘여부, done: 그때 대기가 비어 있었나 }
+  function isCollapsed(time, pendCount){
+    var done = (pendCount === 0);
     var o = collapsed[time];
     if (o){
-      if (o.done === done) return o.v;   // 끝남 상태가 그대로면 손으로 정한 대로
-      delete collapsed[time];            // 체크를 풀었다 다시 하면 자동 접힘으로 되돌린다
+      if (o.done === done) return o.v;   // 대기 상태가 그대로면 손으로 정한 대로
+      delete collapsed[time];            // 대기가 생기거나 사라지면 기본 규칙으로
     }
     if (!done) return false;
+    // 마지막 하나를 체크한 직후에는 손가락 밑에서 사라지지 않게 잠깐 둔다
     return Date.now() - (touched[time] || 0) > COLLAPSE_DELAY;
   }
   function setCollapsed(time, v, done){ collapsed[time] = { v: v, done: done }; }
@@ -1028,10 +1038,10 @@ window.dispatchEvent(new Event('fb-ready'));
     if (!items.length){
       if (q){
         em.classList.remove('hide');
-        em.textContent = '「' + query.trim() + '」와(과) 일치하는 예약이 없습니다.';
+        em.textContent = '「' + query.trim() + '」 검색 결과가 없습니다';
       } else {
         em.classList.add('hide');
-        if (state && panel.classList.contains('hide')) openPaste(false, true);
+        if (state && panel.classList.contains('hide')) openPaste(true);
       }
       return;
     }
@@ -1039,7 +1049,7 @@ window.dispatchEvent(new Event('fb-ready'));
 
     // 다른 기기에서 명단이 들어오면 이쪽 붙여넣기 창은 닫는다.
     // 단, 내가 직접 입력하던 중이면 건드리지 않는다.
-    if (!panel.classList.contains('hide') && !appendMode && !ta.value.trim()) closePaste();
+    if (!panel.classList.contains('hide') && !ta.value.trim()) closePaste();
 
     var openCount = 0;
     groups.forEach(function(g, idx){
@@ -1047,8 +1057,7 @@ window.dispatchEvent(new Event('fb-ready'));
       var came = g.items.filter(function(x){ return x.status==='arrived'; }).length;
       var off  = g.items.filter(function(x){ return x.status==='cancelled'; }).length;
       var tot  = g.items.length;
-      var stillLive = (gap === 0) && slotLive(g.time, now);
-      var shut = q ? false : isCollapsed(g.time, pend.length, stillLive);
+      var shut = q ? false : isCollapsed(g.time, pend.length);
 
       var wrap = document.createElement('section');
       wrap.className = 'group' + (g.time === nowTime ? ' now' : (pend.length ? '' : ' done')) + (shut ? ' shut' : '');
@@ -1073,7 +1082,7 @@ window.dispatchEvent(new Event('fb-ready'));
           if (editing && inHere(editing)) editing = null;
           if (openMenu && inHere(openMenu)) openMenu = null;
         }
-        setCollapsed(g.time, willShut, pend.length === 0 && !stillLive);
+        setCollapsed(g.time, willShut, pend.length === 0);
         render();
       });
       wrap.appendChild(head);
@@ -1256,7 +1265,7 @@ window.dispatchEvent(new Event('fb-ready'));
     var time = normTime(timeV);
     var name = String(nameV).replace(/\s+/g,' ').trim();
     var pax = parseInt(paxV, 10);
-    if (!time){ toast('시간 형식을 확인해 주세요'); return; }
+    if (!time){ toast('시간을 확인해 주세요'); return; }
     if (!name){ toast('이름을 입력해 주세요'); return; }
     if (!(pax > 0)){ toast('인원을 확인해 주세요'); return; }
 
@@ -1315,28 +1324,15 @@ window.dispatchEvent(new Event('fb-ready'));
   function esc(t){
     return t.replace(/[<>&]/g, function(c){ return { '<':'&lt;', '>':'&gt;', '&':'&amp;' }[c]; });
   }
-  // 입력칸은 화면 높이의 절반까지만 늘리고, 그 이상은 안에서 스크롤한다.
-  // 오버레이(오류 표시)도 같은 위치로 따라가야 줄이 어긋나지 않는다.
-  // 입력칸 기본 높이 = 카드 위쪽(제목·안내)과 아래 버튼을 뺀 나머지.
-  // 명단이 없을 때 화면이 허전하지 않고, 등록 버튼이 하단 메뉴 근처에 오게 된다.
-  // 키보드가 올라올 자리를 남겨 버튼이 가려지지 않도록 여유를 둔다.
-  // 비어 있든 가득 차든 같은 높이 — 화면의 약 46%.
-  // 등록 버튼이 늘 같은 자리에 있고, 키보드가 올라올 공간도 남는다.
-  // 「예약 추가」 시트는 한두 줄만 치는 자리다.
-  // 큰 입력칸을 두면 키보드가 올라왔을 때 버튼이 화면 밖으로 밀린다.
+  // 입력칸 높이는 내용과 무관하게 화면의 46%로 고정한다.
+  // 등록 버튼이 늘 같은 자리에 있고, 키보드가 올라올 자리도 남는다.
+  // 넘치는 줄은 안에서 스크롤하고, 오류 표시 오버레이도 같이 따라가야 줄이 안 어긋난다.
   function taBaseHeight(){
     var vh = window.innerHeight || 700;
-    if (panel && panel.classList.contains('asSheet')){
-      return Math.max(84, Math.min(Math.round(vh * 0.22), 190));
-    }
     return Math.max(260, Math.min(Math.round(vh * 0.46), 420));
   }
   function autoGrow(){
     var h = taBaseHeight();
-    if (panel && panel.classList.contains('asSheet')){
-      taEl.style.height = 'auto';                     // 내용만큼만, 한도까지
-      h = Math.max(84, Math.min(h, taEl.scrollHeight));
-    }
     taEl.style.height = h + 'px';
     taEl.style.overflowY = (taEl.scrollHeight > h + 2) ? 'auto' : 'hidden';
     hl.scrollTop = taEl.scrollTop;
@@ -1347,7 +1343,7 @@ window.dispatchEvent(new Event('fb-ready'));
   });
   function clearBad(){
     marking = false;
-    badBox.classList.add('hide');
+    badBox.classList.add('off');
     hl.innerHTML = '';
   }
   // 지금 커서가 있는 줄 번호 (1부터)
@@ -1369,7 +1365,7 @@ window.dispatchEvent(new Event('fb-ready'));
     marking = true;
     paintBad(bad, -1);
     badBox.textContent = '표시된 줄을 양식에 맞게 고쳐 주세요';
-    badBox.classList.remove('hide');
+    badBox.classList.remove('off');
     autoGrow();
   }
   // 표시 중일 때는 입력할 때마다 다시 검사한다.
@@ -1414,35 +1410,15 @@ window.dispatchEvent(new Event('fb-ready'));
     recheck(false);
   });
 
-  function applyPaste(text, append){
+  function applyPaste(text){
     var fresh = parse(text);
     if (fresh.bad.length){ showBad(fresh.bad); return false; }
     clearBad();
-    if (!fresh.length){ toast('읽을 수 있는 줄이 없습니다'); return false; }
-    var items, added = fresh.length;
-    if (append && state){
-      var exist = {};
-      var maxSeq = 0;
-      state.items.forEach(function(it){
-        exist[it.id] = true;
-        if ((it.seq||0) > maxSeq) maxSeq = it.seq||0;
-      });
-      items = state.items.slice();
-      added = 0;
-      fresh.forEach(function(it){
-        if (exist[it.id]) return;
-        it.seq = ++maxSeq;
-        items.push(it);
-        added++;
-      });
-      if (!added){ toast('이미 등록된 예약입니다'); return false; }
-    } else {
-      items = fresh;
-    }
-    state = { date: viewDate, rosterTs: Date.now(), items: items.sort(sortItems) };
+    if (!fresh.length){ toast('등록할 예약이 없습니다'); return false; }
+    state = { date: viewDate, rosterTs: Date.now(), items: fresh.sort(sortItems) };
     render();
     flush();
-    toast(added + '건 등록');
+    toast(fresh.length + '건 등록');
     return true;
   }
 
@@ -1454,42 +1430,23 @@ window.dispatchEvent(new Event('fb-ready'));
     else closePaste();
   });
   var ta = document.getElementById('ta');
-  var appendMode = false;
-  var PH_FULL = ta.getAttribute('placeholder') || '';
-  var PH_ADD  = '15:00 김동현 4명\n17:30 Donghyun Lee 3명';
-
-  function openPaste(append, silent){
-    appendMode = append;
+  // 하루치 명단을 통째로 받는 창. 한 건 추가는 「예약 추가」 폼이 맡는다.
+  function openPaste(silent){
     var g = dayGap(viewDate);
     var day = g === 1 ? '내일' : g === -1 ? '어제' : '오늘';
-    document.getElementById('pasteTitle').textContent = append ? '예약 추가' : (day + ' 예약 명단 붙여넣기');
-    document.getElementById('pasteHint').textContent = append
-      ? '추가할 예약만 적어 주세요. 기존 명단은 그대로 둡니다.'
-      : '양식에 맞게 붙여넣어 주세요.';
-    document.getElementById('loadBtn').textContent = append ? '추가' : '명단 등록';
-    ta.placeholder = append ? PH_ADD : PH_FULL;
+    document.getElementById('pasteTitle').textContent = day + ' 예약 명단 붙여넣기';
     // 명단이 아예 없을 땐 돌아갈 화면이 없으므로 취소 버튼을 숨긴다
     var hasItems = !!(state && state.items && state.items.length);
-    document.getElementById('cancelPaste').classList.toggle('hide', !append && !hasItems);
+    document.getElementById('cancelPaste').classList.toggle('hide', !hasItems);
     ta.value = '';
     clearBad();
-    // 「예약 추가」는 별도 팝업으로 띄운다 (본문 흐름을 건드리지 않게)
-    panel.classList.toggle('asSheet', !!append);
-    panelScrim.classList.toggle('hide', !append);
     autoGrow();
     panel.classList.remove('hide');
-    if (append) backOpen(hidePaste);
     if (silent) return;
-    if (!append) panel.scrollIntoView({behavior:'smooth', block:'center'});
+    panel.scrollIntoView({ behavior:'smooth', block:'center' });
     setTimeout(function(){ ta.focus(); }, 200);
   }
-  function hidePaste(){
-    panel.classList.add('hide');
-    panel.classList.remove('asSheet', 'kb');
-    panelScrim.classList.add('hide');
-    appendMode = false;
-  }
-  function closePaste(){ hidePaste(); backDone(); }
+  function closePaste(){ panel.classList.add('hide'); }
 
   /* ---------- 예약 추가 ---------- */
   var addPanel = document.getElementById('addPanel');
@@ -1567,9 +1524,7 @@ window.dispatchEvent(new Event('fb-ready'));
     var kb = window.innerHeight - vv.height - vv.offsetTop;
     if (!(kb > 80)) kb = 0;            // 주소창이 접히는 정도의 변화는 무시
     document.documentElement.style.setProperty('--kb', Math.round(kb) + 'px');
-    panel.classList.toggle('kb', kb > 0);
     addPanel.classList.toggle('kb', kb > 0);
-    if (!panel.classList.contains('hide')) autoGrow();
   }
   if (vv){
     vv.addEventListener('resize', kbFit);
@@ -1637,7 +1592,7 @@ window.dispatchEvent(new Event('fb-ready'));
   });
 
   document.getElementById('loadBtn').addEventListener('click', function(){
-    if (applyPaste(ta.value, appendMode)) closePaste();
+    if (applyPaste(ta.value)) closePaste();
   });
   document.getElementById('cancelPaste').addEventListener('click', closePaste);
   document.getElementById('addBtn').addEventListener('click', openAdd);
@@ -1716,9 +1671,8 @@ window.dispatchEvent(new Event('fb-ready'));
     state.items.forEach(function(it){
       if (times[it.time] !== undefined) return;
       var pend = state.items.some(function(x){ return x.time===it.time && x.status==='pending'; });
-      var live = (dayGap(viewDate) === 0) && slotLive(it.time, nowMin());
-      times[it.time] = (!pend && !live);   // 이 시간대가 끝난 상태인지 기록
-      if (!isCollapsed(it.time, pend ? 1 : 0, live)) anyOpen = true;
+      times[it.time] = !pend;              // 대기가 비어 있는 시간대인지 기록
+      if (!isCollapsed(it.time, pend ? 1 : 0)) anyOpen = true;
     });
     Object.keys(times).forEach(function(t){ setCollapsed(t, anyOpen, times[t]); });
     if (anyOpen){ editing = null; openMenu = null; }   // 전부 접을 땐 열린 폼도 닫는다
@@ -1801,19 +1755,50 @@ window.dispatchEvent(new Event('fb-ready'));
   document.getElementById('sheetClose').addEventListener('click', closeSheet);
   sheetScrim.addEventListener('click', function(e){ if (e.target === sheetScrim) closeSheet(); });
 
+  var FAQ = [
+    ['메모는 어떻게 다나요?', 1,
+      '예약 추가할 때 <em>메모</em> 칸에 적거나, 이름 오른쪽 ⋯ → <em>수정</em>에서 넣습니다.\n'
+      + '강아지 동반, 창가석 요청, 인플루언서처럼 짧게.\n'
+      + '이름 아래에 노란 글씨로 보이고, 명단 복사에도 괄호로 함께 나갑니다.'],
+    ['예약을 잘못 넣었어요', 0,
+      '이름 오른쪽 ⋯ 을 누르면 <em>방문 · 취소 · 수정 · 삭제</em>가 나옵니다.\n'
+      + '시간을 고치면 그 시간대로 옮겨갑니다.'],
+    ['시간대는 언제 접히나요?', 0,
+      '남은 팀이 없으면 접힙니다. 마지막 한 팀을 체크하고 3초 뒤에.\n'
+      + '체크를 풀면 다시 펼쳐집니다.\n'
+      + '직접 접거나 편 것은 그대로 두고, 남은 팀이 생기거나 없어질 때만 정리합니다.'],
+    ['맨 위 시간은 언제 넘어가나요?', 0,
+      '그 시간대를 다 체크하면 바로 넘어갑니다.\n'
+      + '아니면 정각 예약은 11분, 그 외에는 4분 뒤에.\n'
+      + '15:00 → 15:11, 15:20 → 15:24.'],
+    ['다른 사람이 체크한 게 바로 보이나요?', 0,
+      '1초 안에 반영됩니다.\n'
+      + '연결이 끊기면 맨 위에 빨갛게 표시되고, 끊긴 동안 체크한 것도 다시 연결되면 올라갑니다.'],
+    ['날짜는 언제 바뀌나요?', 0,
+      '자정에 바뀝니다.\n'
+      + '어제 명단은 왼쪽 위 메뉴에서 볼 수 있고, 이틀 지나면 삭제됩니다.']
+  ];
+  var CHEV = '<span class="qchev"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L16 12 L9 19"/></svg></span>';
+
   document.getElementById('faqBtn').addEventListener('click', function(){
     hideDrawer();
-    openSheet('자주 묻는 질문',
-      '<div class="qa"><div class="q">상단 시간은 언제 넘어가나요?</div>'
-      + '<div class="a">정각 예약은 11분, 그 외에는 4분이 지나면 다음 시간대로 넘어갑니다.\n'
-      + '15:00 예약은 15:11에, 15:20 예약은 15:24에.\n'
-      + '그 전이라도 다 체크하면 바로 넘어갑니다.</div></div>'
-      + '<div class="qa"><div class="q">날짜는 언제 바뀌나요?</div>'
-      + '<div class="a">자정에 바뀝니다.\n'
-      + '어제 명단은 왼쪽 위 메뉴에서 볼 수 있고, 이틀 지나면 삭제됩니다.</div></div>'
-      + '<div class="qa"><div class="q">다른 사람이 체크한 게 바로 보이나요?</div>'
-      + '<div class="a">네. 누가 체크하면 1초 안에 반영됩니다.\n'
-      + '연결이 끊기면 상단에 빨갛게 표시되고, 그동안 체크한 것도 다시 연결되면 올라갑니다.</div></div>');
+    openSheet('자주 묻는 질문', '<div class="faq">'
+      + FAQ.map(function(f){
+          return '<div class="qa"><button type="button" class="q">'
+            + '<span>' + f[0] + '</span>'
+            + (f[1] ? '<span class="qnew">NEW</span>' : '')
+            + CHEV + '</button>'
+            + '<div class="a">' + f[2] + '</div></div>';
+        }).join('')
+      + '</div>');
+  });
+  // 한 번에 하나만 펼친다
+  document.getElementById('sheetBody').addEventListener('click', function(e){
+    var q = e.target.closest && e.target.closest('.q');
+    if (!q) return;
+    var box = q.parentNode, was = box.classList.contains('open');
+    [].forEach.call(this.querySelectorAll('.qa.open'), function(x){ x.classList.remove('open'); });
+    if (!was) box.classList.add('open');
   });
 
   // 기기 한 칸 = 이름 + 번호 붙은 세 단계
@@ -1862,7 +1847,7 @@ window.dispatchEvent(new Event('fb-ready'));
     setTimeout(function(){
       if (!sheetScrim.classList.contains('hide')) return;   // 다른 안내가 떠 있으면 건너뛴다
       openSheet('앱으로 설치하기',
-        '<p class="sheetNote" style="margin:-4px 0 14px">홈 화면에 추가하면 앱처럼 바로 열립니다.</p>'
+        '<p class="sheetNote plain" style="margin:-4px 0 14px">「익선취향 예약 매니저」는 홈 화면 앱에 최적화되어 있습니다.</p>'
         + installHtml());
       sheetNever.classList.remove('hide');
     }, 1200);
@@ -1891,7 +1876,7 @@ window.dispatchEvent(new Event('fb-ready'));
       return;
     }
     if (!state){ toast('명단이 없습니다'); return; }
-    sync().then(function(){ toast('최신 상태'); });
+    sync().then(function(){ toast('최신 명단입니다'); });
   });
 
   // 보고용 텍스트 — 체크 안 된 건 뒤에 아무것도 안 붙임
