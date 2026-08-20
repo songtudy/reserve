@@ -9,6 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="익선취향">
+<link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <title>익선취향</title>
@@ -328,6 +329,75 @@
   .foot button:active{background:var(--panel2)}
 
   .empty{text-align:center;color:var(--dim);font-size:13.5px;padding:36px 10px;line-height:1.7;white-space:pre-line}
+  /* ---------- 메뉴 서랍 ---------- */
+  .drawerScrim{
+    position:fixed;inset:0;z-index:60;background:rgba(6,9,13,.6);
+    opacity:1;transition:opacity .2s;
+  }
+  .drawerScrim.hide{opacity:0;pointer-events:none}
+  .drawer{
+    position:fixed;top:0;left:0;bottom:0;z-index:61;
+    width:min(78vw, 300px);
+    background:var(--panel);border-right:1px solid var(--line);
+    padding:calc(env(safe-area-inset-top) + 18px) 0 calc(env(safe-area-inset-bottom) + 14px);
+    transform:translateX(-101%);transition:transform .22s ease;
+    display:flex;flex-direction:column;overflow-y:auto;
+  }
+  .drawer.open{transform:translateX(0)}
+  .dwtitle{padding:0 18px 14px;font-size:17px;font-weight:800;letter-spacing:-.02em}
+  .dwdays{display:flex;flex-direction:column}
+  .dwday{
+    display:flex;align-items:center;gap:10px;
+    padding:13px 18px;border:0;background:none;cursor:pointer;
+    color:var(--dim);font-family:inherit;font-size:14.5px;font-weight:600;text-align:left;
+  }
+  .dwday:active{background:var(--panel2)}
+  .dwday .d1{flex:1;min-width:0;white-space:nowrap}
+  .dwday .d2{font-size:12.5px;font-variant-numeric:tabular-nums}
+  .dwday.on{color:var(--text)}
+  .dwday.on .d1{font-weight:800}
+  .dwday .tick{width:14px;flex:0 0 auto;color:var(--wait)}
+  .dwsep{height:1px;background:var(--line);margin:10px 18px}
+  .dwitem{
+    padding:13px 18px;border:0;background:none;cursor:pointer;
+    color:var(--text);font-family:inherit;font-size:14.5px;font-weight:600;text-align:left;
+  }
+  .dwitem:active{background:var(--panel2)}
+  .dwfoot{
+    margin-top:auto;padding:12px 18px 0;
+    font-size:12.5px;font-weight:600;color:var(--dim);
+    display:flex;align-items:center;gap:6px;
+  }
+  .dwfoot.off{color:var(--warn)}
+
+  /* ---------- 안내 시트 ---------- */
+  .sheetScrim{
+    position:fixed;inset:0;z-index:70;background:rgba(6,9,13,.72);
+    display:flex;align-items:flex-end;justify-content:center;
+  }
+  .sheetScrim.hide{display:none}
+  .sheet{
+    width:100%;max-width:520px;
+    background:var(--panel);border:1px solid var(--line);border-bottom:0;
+    border-radius:18px 18px 0 0;
+    padding:20px 18px calc(env(safe-area-inset-bottom) + 16px);
+    max-height:82vh;overflow-y:auto;
+  }
+  .sheet h3{margin:0 0 14px;font-size:17px;font-weight:800;letter-spacing:-.02em}
+  .qa{margin:0 0 18px}
+  .qa .q{font-size:14.5px;font-weight:700;color:var(--wait);margin-bottom:6px}
+  .qa .a{font-size:14px;line-height:1.65;color:var(--dim);white-space:pre-line}
+  .howto{margin:0 0 16px}
+  .howto .h{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:5px}
+  .howto .s{font-size:14px;line-height:1.6;color:var(--dim)}
+  .howto .s b{color:var(--text);font-weight:600}
+  .sheetNote{font-size:13px;line-height:1.6;color:var(--go);margin:0 0 14px}
+  .sheetClose{
+    width:100%;padding:13px 0;margin-top:2px;border-radius:11px;
+    border:1px solid var(--line);background:var(--panel2);
+    color:var(--text);font-family:inherit;font-size:15px;font-weight:650;cursor:pointer;
+  }
+
   .scrim{
     position:fixed;inset:0;z-index:50;
     background:rgba(6,9,13,.72);
@@ -375,9 +445,8 @@
   <header>
     <div class="toprow">
       <div class="nav">
-        <button type="button" id="prevDay" aria-label="어제"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg></button>
+        <button type="button" id="menuBtn" aria-label="메뉴"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
         <span class="date num" id="dateLabel"></span>
-        <button type="button" id="nextDay" aria-label="내일"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L16 12 L9 19"/></svg></button>
       </div>
       <div class="tools">
         <span class="dayprog num hide" id="dayProg"></span>
@@ -433,6 +502,25 @@
       <button id="addBtn">예약 추가</button>
       <button id="foldBtn">전체 접기</button>
     </div>
+  </div>
+</div>
+
+<div class="drawerScrim hide" id="drawerScrim"></div>
+<aside class="drawer" id="drawer" aria-label="메뉴">
+  <div class="dwtitle">익선취향</div>
+  <div class="dwdays" id="dwDays"></div>
+  <div class="dwsep"></div>
+  <button type="button" class="dwitem" id="faqBtn">자주 묻는 질문</button>
+  <button type="button" class="dwitem" id="installBtn">앱으로 설치하기</button>
+  <div class="dwsep"></div>
+  <div class="dwfoot" id="dwConn"></div>
+</aside>
+
+<div class="sheetScrim hide" id="sheetScrim">
+  <div class="sheet">
+    <h3 id="sheetTitle"></h3>
+    <div id="sheetBody"></div>
+    <button type="button" class="sheetClose" id="sheetClose">닫기</button>
   </div>
 </div>
 
@@ -695,6 +783,12 @@ window.dispatchEvent(new Event('fb-ready'));
     box.className = 'sync' + (ready ? ' ok' : '');
     dot.className = 'dot' + (ready ? '' : ' stale');
     txt.textContent = ready ? '연결됨' : '연결 안 됨';
+    var cf = document.getElementById('dwConn');
+    if (cf){
+      cf.className = 'dwfoot' + (ready ? '' : ' off');
+      cf.innerHTML = '<span class="dot' + (ready ? '' : ' stale') + '"></span>'
+        + (ready ? '연결됨' : '연결 안 됨');
+    }
   }
 
   /* ---------- 렌더 ---------- */
@@ -817,8 +911,7 @@ window.dispatchEvent(new Event('fb-ready'));
 
     // 날짜 표시 / 이동 버튼
     document.body.classList.toggle('offday', gap !== 0);
-    document.getElementById('prevDay').disabled = (gap <= -1);
-    document.getElementById('nextDay').disabled = (gap >= 1);
+    renderDrawerDays();
 
     // 목록
     list.innerHTML = '';
@@ -1355,8 +1448,108 @@ window.dispatchEvent(new Event('fb-ready'));
     render();
   });
 
-  document.getElementById('prevDay').addEventListener('click', function(){ goDate(shiftDate(viewDate, -1)); });
-  document.getElementById('nextDay').addEventListener('click', function(){ goDate(shiftDate(viewDate, 1)); });
+  /* ---------- 메뉴 서랍 ---------- */
+  var drawer = document.getElementById('drawer');
+  var drawerScrim = document.getElementById('drawerScrim');
+
+  function openDrawer(){
+    renderDrawerDays();
+    drawerScrim.classList.remove('hide');
+    drawer.classList.add('open');
+  }
+  function closeDrawer(){
+    drawer.classList.remove('open');
+    drawerScrim.classList.add('hide');
+  }
+  document.getElementById('menuBtn').addEventListener('click', openDrawer);
+  drawerScrim.addEventListener('click', closeDrawer);
+
+  // 어제 / 오늘 / 내일 — 건수와 함께
+  function renderDrawerDays(){
+    var box = document.getElementById('dwDays');
+    if (!box) return;
+    box.innerHTML = '';
+    [-1, 0, 1].forEach(function(off){
+      var ds = shiftDate(bizDate(), off);
+      var p = ds.split('-');
+      var d = new Date(+p[0], +p[1]-1, +p[2]);
+      var w = ['일','월','화','수','목','금','토'][d.getDay()];
+      var label = off === -1 ? '어제' : off === 0 ? '오늘' : '내일';
+      var cur = (ds === viewDate);
+
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'dwday' + (cur ? ' on' : '');
+      b.innerHTML = '<span class="tick">' + (cur ? '✓' : '') + '</span>'
+        + '<span class="d1">' + (+p[1]) + '/' + (+p[2]) + ' (' + w + ') · ' + label + '</span>'
+        + '<span class="d2" data-c></span>';
+      b.addEventListener('click', function(){ closeDrawer(); if (!cur) goDate(ds); });
+      box.appendChild(b);
+
+      var slot = b.querySelector('[data-c]');
+      if (cur){
+        slot.textContent = (state && state.items.length) ? state.items.length + '건' : '—';
+      } else if (hasStore()) {
+        fb().get('roster:' + ds).then(function(r){
+          slot.textContent = (r && r.items && r.items.length) ? r.items.length + '건' : '—';
+        }).catch(function(){ slot.textContent = '—'; });
+      } else {
+        slot.textContent = '—';
+      }
+    });
+    var cf = document.getElementById('dwConn');
+    if (cf){
+      cf.className = 'dwfoot' + (online && hasStore() ? '' : ' off');
+      cf.innerHTML = '<span class="dot' + (online && hasStore() ? '' : ' stale') + '"></span>'
+        + (online && hasStore() ? '연결됨' : '연결 안 됨');
+    }
+  }
+
+  /* ---------- 안내 시트 ---------- */
+  var sheetScrim = document.getElementById('sheetScrim');
+  function openSheet(title, html){
+    document.getElementById('sheetTitle').textContent = title;
+    document.getElementById('sheetBody').innerHTML = html;
+    sheetScrim.classList.remove('hide');
+  }
+  function closeSheet(){ sheetScrim.classList.add('hide'); }
+  document.getElementById('sheetClose').addEventListener('click', closeSheet);
+  sheetScrim.addEventListener('click', function(e){ if (e.target === sheetScrim) closeSheet(); });
+
+  document.getElementById('faqBtn').addEventListener('click', function(){
+    closeDrawer();
+    openSheet('자주 묻는 질문',
+      '<div class="qa"><div class="q">상단 시간은 언제 넘어가나요?</div>'
+      + '<div class="a">정각 예약은 11분, 그 외에는 4분이 지나면 다음 시간대로 넘어갑니다.\n'
+      + '15:00 예약은 15:11에, 15:20 예약은 15:24에.\n'
+      + '그 전이라도 다 체크하면 바로 넘어갑니다.</div></div>'
+      + '<div class="qa"><div class="q">날짜는 언제 바뀌나요?</div>'
+      + '<div class="a">자정에 바뀝니다.\n'
+      + '어제 명단은 왼쪽 위 메뉴에서 볼 수 있고, 이틀 지나면 삭제됩니다.</div></div>'
+      + '<div class="qa"><div class="q">다른 사람이 체크한 게 바로 보이나요?</div>'
+      + '<div class="a">네. 누가 체크하면 1초 안에 반영됩니다.\n'
+      + '연결이 끊기면 상단에 빨갛게 표시되고, 그동안 체크한 것도 다시 연결되면 올라갑니다.</div></div>');
+  });
+
+  document.getElementById('installBtn').addEventListener('click', function(){
+    closeDrawer();
+    var standalone = false;
+    try {
+      standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+        || window.navigator.standalone === true;
+    } catch(e){}
+    if (standalone){
+      openSheet('앱으로 설치하기', '<p class="sheetNote">이미 앱으로 실행 중입니다.</p>');
+      return;
+    }
+    openSheet('앱으로 설치하기',
+      '<div class="howto"><div class="h">아이폰 · 사파리</div>'
+      + '<div class="s">하단 <b>⋯</b> → <b>공유</b> → <b>홈 화면에 추가</b></div></div>'
+      + '<div class="howto"><div class="h">갤럭시 · 삼성 인터넷</div>'
+      + '<div class="s">하단 <b>≡</b> → <b>현재 페이지 추가</b> → <b>홈 화면</b></div></div>'
+      + '<div class="howto"><div class="h">갤럭시 · 크롬</div>'
+      + '<div class="s">우측 위 <b>⋮</b> → <b>홈 화면에 추가</b></div></div>');
+  });
 
   function reloadPage(){ try { window.location.reload(); } catch(e){} }
 
