@@ -1767,22 +1767,12 @@ window.dispatchEvent(new Event('fb-ready'));
   });
 
   /* ---------- 앱 복귀 ---------- */
-  // 아이폰에서 앱 전환 후 돌아오면 하단 바 같은 고정 요소가 엉뚱한 자리에 남아 있곤 한다.
-  // 레이아웃을 한 번 다시 계산하게 만들어 제자리로 돌려놓는다.
-  function repaintFixed(){
-    document.documentElement.style.setProperty('--kb', '0px');
-    var y = window.pageYOffset || 0;
-    [].forEach.call(document.querySelectorAll('.foot, header'), function(el){
-      var keep = el.style.display;
-      el.style.display = 'none';
-      void el.offsetHeight;          // 강제 리플로우
-      el.style.display = keep;
-    });
-    window.scrollTo(0, y);
-  }
-  window.addEventListener('pageshow', repaintFixed);
+  // 앱을 다시 열면 그동안 다른 사람이 체크한 내용을 받아온다.
+  // 레이아웃은 건드리지 않는다 (건드렸다가 하단 바가 엉뚱한 자리에 고정된 적이 있다).
   document.addEventListener('visibilitychange', function(){
-    if (!document.hidden) setTimeout(repaintFixed, 60);
+    if (document.hidden) return;
+    document.documentElement.style.setProperty('--kb', '0px');
+    if (typeof sync === 'function') sync();
   });
 
   /* ---------- 테마 ---------- */
