@@ -78,12 +78,13 @@
     font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,"Noto Sans KR",system-ui,sans-serif;
     font-size:16px;
     line-height:1.4;
-    padding:0 0 calc(112px + env(safe-area-inset-bottom));
+    display:flex;flex-direction:column;
+    min-height:100vh;min-height:100dvh;
     -webkit-font-smoothing:antialiased;
     touch-action:manipulation;        /* 두 번 탭 확대 방지 */
     -webkit-text-size-adjust:100%;
   }
-  .wrap{max-width:640px;margin:0 auto;padding:0 14px}
+  .wrap{flex:1 0 auto;width:100%;max-width:640px;margin:0 auto;padding:0 14px 18px}
   .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 
   /* header */
@@ -371,6 +372,7 @@
   }
   /* 오류가 사라져도 자리를 비워둔다 — 등록 버튼이 튀어오르면 오타 수정 중에 잘못 눌린다 */
   .badbox.off{visibility:hidden}
+  .badbox.gone{display:none}
 
   .btns{display:flex;gap:8px;margin-top:12px}
   .btn{
@@ -384,9 +386,12 @@
 
   /* footer */
   .foot.hide{display:none}
+  /* 화면에 붙여두되 문서 흐름 안에 둔다.
+     position:fixed 는 아이폰에서 자리를 못 잡아 하단 바가 떠 있는 문제가 반복됐다.
+     sticky 는 내용이 짧으면 흐름 맨 끝(= 화면 바닥), 길면 스크롤 중 화면 바닥에 붙는다. */
   .foot{
-    position:fixed;left:0;right:0;bottom:0;z-index:30;
-    /* 반투명 + 흐림 처리를 쓰면 아이폰에서 고정 위치가 어긋난다. 불투명하게 둔다 */
+    position:sticky;bottom:0;z-index:30;
+    /* 반투명 + 흐림 처리를 쓰면 아이폰에서 위치가 어긋난다. 불투명하게 둔다 */
     background:var(--ink);
     border-top:1px solid var(--line);
     padding:9px 14px calc(9px + env(safe-area-inset-bottom));
@@ -553,9 +558,10 @@
     display:inline-grid;place-items:center;
     min-width:25px;height:22px;padding:0 5px;margin:0 1px;
     border:1px solid var(--line);border-radius:6px;background:var(--ink);
-    font-size:15px;font-weight:800;color:var(--text);line-height:1;
+    color:var(--text);line-height:0;
     vertical-align:middle;
   }
+  .key svg{display:block}
   .sheetNote{font-size:13px;line-height:1.6;color:var(--goTx);margin:0 0 14px;white-space:pre-line}
   .sheetNote.plain{color:var(--dim)}
   .about{font-size:14px;line-height:1.75;color:var(--dim);margin:0 0 12px}
@@ -656,7 +662,7 @@
       <div class="hl" id="hl" aria-hidden="true"></div>
       <textarea id="ta" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" placeholder="14:00 임동현 2명&#10;15:00 김동현 4명 방문&#10;15:00 박동현 2명&#10;17:00 Donghyun Lee 3명 취소&#10;19:00 송동현 5명"></textarea>
     </div>
-    <div class="badbox off" id="badBox">&nbsp;</div>
+    <div class="badbox off gone" id="badBox">&nbsp;</div>
     <div class="btns">
       <button class="btn primary" id="loadBtn">명단 등록</button>
       <button class="btn ghost hide" id="cancelPaste">취소</button>
@@ -1191,8 +1197,6 @@ window.dispatchEvent(new Event('fb-ready'));
 
     var hd = document.querySelector('header');
     if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
-
-    if (typeof pinFoot === 'function') requestAnimationFrame(pinFoot);
   }
 
   function rowEl(it){
@@ -1439,8 +1443,23 @@ window.dispatchEvent(new Event('fb-ready'));
   });
   function clearBad(){
     marking = false;
+    // 자리는 비워둔 채로. 오류 표시가 사라지며 버튼이 튀어오르면 고치는 중에 잘못 눌린다.
     badBox.classList.add('off');
     hl.innerHTML = '';
+    syncLoop(false);
+  }
+
+  // 7) 아이폰은 관성 스크롤 중에 scroll 이벤트를 띄엄띄엄 준다.
+  // 오류 표시가 켜져 있는 동안에는 매 프레임 입력칸 스크롤을 따라간다.
+  var syncRaf = 0;
+  function syncLoop(on){
+    if (!on){ cancelAnimationFrame(syncRaf); syncRaf = 0; return; }
+    if (syncRaf) return;
+    (function step(){
+      if (!marking){ syncRaf = 0; return; }
+      if (hl.scrollTop !== taEl.scrollTop) hl.scrollTop = taEl.scrollTop;
+      syncRaf = requestAnimationFrame(step);
+    })();
   }
   // 지금 커서가 있는 줄 번호 (1부터)
   function caretLine(){
@@ -1461,7 +1480,8 @@ window.dispatchEvent(new Event('fb-ready'));
     marking = true;
     paintBad(bad, -1);
     badBox.textContent = '표시된 줄을 양식에 맞게 고쳐 주세요';
-    badBox.classList.remove('off');
+    badBox.classList.remove('off', 'gone');
+    syncLoop(true);
     autoGrow();
   }
   // 표시 중일 때는 입력할 때마다 다시 검사한다.
@@ -1496,9 +1516,11 @@ window.dispatchEvent(new Event('fb-ready'));
         requestAnimationFrame(function(){ hl.scrollTop = taEl.scrollTop; });
         return;
       }
+      var sy = window.pageYOffset || 0;
       try { taEl.setSelectionRange(0, 0); } catch(e){}
       taEl.scrollTop = 0;
       hl.scrollTop = 0;
+      window.scrollTo(0, sy);          // 커서 옮기느라 화면이 따라 움직이지 않게
     }, 0);
   });
   taEl.addEventListener('blur', function(){
@@ -1536,6 +1558,7 @@ window.dispatchEvent(new Event('fb-ready'));
     document.getElementById('cancelPaste').classList.toggle('hide', !hasItems);
     ta.value = '';
     clearBad();
+    badBox.classList.add('gone');
     autoGrow();
     panel.classList.remove('hide');
     if (silent) return;
@@ -1775,28 +1798,12 @@ window.dispatchEvent(new Event('fb-ready'));
     render();
   });
 
-  /* ---------- 하단 바 위치 ---------- */
-  // 아이폰에서 position:fixed 하단 바가 화면 아래에 딱 붙지 않고 떠 있는 경우가 있다.
-  // 짐작하지 말고 실제 위치를 재서 어긋난 만큼만 내려준다.
-  // 제대로 붙어 있는 브라우저에서는 어긋남이 0이라 아무 일도 하지 않는다.
-  var footEl = document.querySelector('.foot');
-  function pinFoot(){
-    if (!footEl || footEl.classList.contains('hide')) return;
-    footEl.style.transform = '';
-    var want = document.documentElement.clientHeight;   // 레이아웃 뷰포트 바닥
-    var off = Math.round(want - footEl.getBoundingClientRect().bottom);
-    if (Math.abs(off) > 1) footEl.style.transform = 'translateY(' + off + 'px)';
-  }
-  window.addEventListener('resize', pinFoot);
-  window.addEventListener('orientationchange', function(){ setTimeout(pinFoot, 250); });
-
   /* ---------- 앱 복귀 ---------- */
   // 앱을 다시 열면 그동안 다른 사람이 체크한 내용을 받아온다.
   // 레이아웃은 건드리지 않는다 (건드렸다가 하단 바가 엉뚱한 자리에 고정된 적이 있다).
   document.addEventListener('visibilitychange', function(){
     if (document.hidden) return;
     document.documentElement.style.setProperty('--kb', '0px');
-    requestAnimationFrame(pinFoot);
     if (typeof sync === 'function') sync();
   });
 
@@ -1892,6 +1899,7 @@ window.dispatchEvent(new Event('fb-ready'));
   drawerScrim.addEventListener('click', closeDrawer);
 
   // 어제 / 오늘 / 내일 — 건수와 함께
+  var dayCount = {};                 // 날짜별 건수를 기억해 둔다
   function renderDrawerDays(){
     var box = document.getElementById('dwDays');
     if (!box) return;
@@ -1916,10 +1924,13 @@ window.dispatchEvent(new Event('fb-ready'));
       var slot = b.querySelector('[data-c]');
       if (cur){
         slot.textContent = (state && state.items.length) ? state.items.length + '건' : '—';
+        dayCount[ds] = slot.textContent;
       } else if (hasStore()) {
+        slot.textContent = dayCount[ds] || '';   // 받아오는 동안 이전 값을 그대로 둔다
         fb().get('roster:' + ds).then(function(r){
-          slot.textContent = (r && r.items && r.items.length) ? r.items.length + '건' : '—';
-        }).catch(function(){ slot.textContent = '—'; });
+          dayCount[ds] = (r && r.items && r.items.length) ? r.items.length + '건' : '—';
+          slot.textContent = dayCount[ds];
+        }).catch(function(){ slot.textContent = dayCount[ds] || '—'; });
       } else {
         slot.textContent = '—';
       }
@@ -1953,7 +1964,7 @@ window.dispatchEvent(new Event('fb-ready'));
     ['메모는 어떻게 다나요?', 1,
       '예약 추가할 때 <em>메모</em> 칸에 적거나, 이름 오른쪽 ⋯ → <em>수정</em>에서 넣습니다.\n'
       + '창가석 요청, 인플루언서, 강아지 동반처럼 짧게.\n'
-      + '이름 아래에 노란 글씨로 보이고, 명단 복사에도 괄호로 함께 나갑니다.'],
+      + '이름 아래에 노란 글씨로 보이고, 명단 복사에는 들어가지 않습니다.'],
     ['예약을 잘못 넣었어요', 0,
       '이름 오른쪽 ⋯ 을 누르면 <em>방문 · 취소 · 수정 · 삭제</em>가 나옵니다.\n'
       + '시간을 고치면 그 시간대로 옮겨갑니다.'],
@@ -2012,12 +2023,18 @@ window.dispatchEvent(new Event('fb-ready'));
   }
   function installHtml(){
     return plat('ios', '아이폰 (사파리)', [
-        '화면 <b>아래 오른쪽</b> <span class="key">⋯</span>',
+        '화면 <b>아래 오른쪽</b> <span class="key">'
+          + '<svg viewBox="0 0 22 8" width="20" height="8" fill="currentColor" aria-hidden="true">'
+          + '<circle cx="3.4" cy="4" r="1.7"/><circle cx="11" cy="4" r="1.7"/><circle cx="18.6" cy="4" r="1.7"/></svg>'
+          + '</span>',
         '<b>공유</b>',
         '<b>홈 화면에 추가</b>'
       ])
       + plat('and', '갤럭시 (크롬)', [
-        '화면 <b>위 오른쪽</b> <span class="key">⋮</span>',
+        '화면 <b>위 오른쪽</b> <span class="key">'
+          + '<svg viewBox="0 0 8 22" width="8" height="20" fill="currentColor" aria-hidden="true">'
+          + '<circle cx="4" cy="3.4" r="1.7"/><circle cx="4" cy="11" r="1.7"/><circle cx="4" cy="18.6" r="1.7"/></svg>'
+          + '</span>',
         '<b>설치 및 바로가기 만들기</b>',
         '<b>설치</b>'
       ]);
@@ -2092,8 +2109,7 @@ window.dispatchEvent(new Event('fb-ready'));
       prev = it.time;
       var tail = it.status === 'arrived' ? ' 방문'
                : it.status === 'cancelled' ? ' 취소' : '';
-      out.push(it.time + ' ' + it.name + ' ' + it.pax + '명' + tail
-        + (it.memo ? ' (' + it.memo + ')' : ''));
+      out.push(it.time + ' ' + it.name + ' ' + it.pax + '명' + tail);
     });
     return out.join('\n');
   }
