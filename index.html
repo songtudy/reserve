@@ -255,13 +255,17 @@
   .menu .del{color:var(--warn)}
 
   /* paste panel */
+  /* --kb = 키보드가 가리는 높이. 키보드가 올라오면 그만큼 시트를 띄운다 */
   .panel.asSheet{
-    position:fixed;left:50%;bottom:0;transform:translateX(-50%);
+    position:fixed;left:50%;bottom:0;
+    transform:translateX(-50%) translateY(calc(-1 * var(--kb, 0px)));
+    transition:transform .16s ease;
     z-index:71;width:100%;max-width:520px;margin:0;
     border-radius:18px 18px 0 0;border-bottom:0;
-    max-height:86vh;overflow-y:auto;
+    max-height:calc(86vh - var(--kb, 0px));overflow-y:auto;
     padding-bottom:calc(env(safe-area-inset-bottom) + 16px);
   }
+  .panel.asSheet.kb{ padding-bottom:14px }
   .panelScrim{position:fixed;inset:0;z-index:70;background:rgba(6,9,13,.72)}
   .panelScrim.hide{display:none}
   .panel{
@@ -345,7 +349,8 @@
     position:fixed;inset:0;z-index:60;background:rgba(6,9,13,.6);
     opacity:1;transition:opacity .2s;
   }
-  .drawerScrim.hide{opacity:0;pointer-events:none}
+  /* 전역 .hide는 display:none이라 페이드가 안 된다 — 서랍 막은 따로 둔다 */
+  .drawerScrim.off{opacity:0;pointer-events:none}
   .drawer{
     position:fixed;top:0;left:0;bottom:0;z-index:61;
     width:min(68vw, 258px);
@@ -374,6 +379,7 @@
     color:var(--text);font-family:inherit;font-size:14.5px;font-weight:600;text-align:left;
   }
   .dwitem:active{background:var(--panel2)}
+  .dwsep.push{margin-top:auto}
   .dwfoot{
     padding:12px 18px 0;
     font-size:12.5px;font-weight:600;color:var(--dim);
@@ -412,7 +418,8 @@
   .scrim{
     position:fixed;inset:0;z-index:50;
     background:rgba(6,9,13,.72);
-    display:grid;place-items:center;padding:22px;
+    display:grid;place-items:center;
+    padding:22px 22px calc(22px + var(--kb, 0px));
   }
   .scrim.hide{display:none}
   .dialog{
@@ -487,7 +494,7 @@
 
   <div class="panel hide" id="pastePanel">
     <h2 id="pasteTitle">오늘 예약 명단 붙여넣기</h2>
-    <p>양식에 맞게 붙여넣어 주세요.</p>
+    <p id="pasteHint">양식에 맞게 붙여넣어 주세요.</p>
     <div class="tawrap">
       <div class="hl" id="hl" aria-hidden="true"></div>
       <textarea id="ta" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" placeholder="14:00 임동현 2명&#10;15:00 김동현 4명 방문&#10;15:00 박동현 2명&#10;17:00 Donghyun Lee 3명 취소&#10;19:00 송동현 5명"></textarea>
@@ -517,14 +524,14 @@
 </div>
 
 <div class="panelScrim hide" id="panelScrim"></div>
-<div class="drawerScrim hide" id="drawerScrim"></div>
+<div class="drawerScrim off" id="drawerScrim"></div>
 <aside class="drawer" id="drawer" aria-label="메뉴">
   <div class="dwtitle">익선취향</div>
   <div class="dwdays" id="dwDays"></div>
   <div class="dwsep"></div>
   <button type="button" class="dwitem" id="faqBtn">자주 묻는 질문</button>
   <button type="button" class="dwitem" id="installBtn">앱으로 설치하기</button>
-  <div class="dwsep"></div>
+  <div class="dwsep push"></div>
   <div class="dwfoot" id="dwConn"></div>
 </aside>
 
@@ -1210,12 +1217,21 @@ window.dispatchEvent(new Event('fb-ready'));
   // 키보드가 올라올 자리를 남겨 버튼이 가려지지 않도록 여유를 둔다.
   // 비어 있든 가득 차든 같은 높이 — 화면의 약 46%.
   // 등록 버튼이 늘 같은 자리에 있고, 키보드가 올라올 공간도 남는다.
+  // 「예약 추가」 시트는 한두 줄만 치는 자리다.
+  // 큰 입력칸을 두면 키보드가 올라왔을 때 버튼이 화면 밖으로 밀린다.
   function taBaseHeight(){
     var vh = window.innerHeight || 700;
+    if (panel && panel.classList.contains('asSheet')){
+      return Math.max(84, Math.min(Math.round(vh * 0.22), 190));
+    }
     return Math.max(260, Math.min(Math.round(vh * 0.46), 420));
   }
   function autoGrow(){
     var h = taBaseHeight();
+    if (panel && panel.classList.contains('asSheet')){
+      taEl.style.height = 'auto';                     // 내용만큼만, 한도까지
+      h = Math.max(84, Math.min(h, taEl.scrollHeight));
+    }
     taEl.style.height = h + 'px';
     taEl.style.overflowY = (taEl.scrollHeight > h + 2) ? 'auto' : 'hidden';
     hl.scrollTop = taEl.scrollTop;
@@ -1321,15 +1337,22 @@ window.dispatchEvent(new Event('fb-ready'));
   panelScrim.addEventListener('click', closePaste);
   var ta = document.getElementById('ta');
   var appendMode = false;
+  var PH_FULL = ta.getAttribute('placeholder') || '';
+  var PH_ADD  = '15:00 김동현 4명\n17:30 Donghyun Lee 3명';
 
   function openPaste(append, silent){
     appendMode = append;
     var g = dayGap(viewDate);
     var day = g === 1 ? '내일' : g === -1 ? '어제' : '오늘';
     document.getElementById('pasteTitle').textContent = append ? '예약 추가' : (day + ' 예약 명단 붙여넣기');
+    document.getElementById('pasteHint').textContent = append
+      ? '추가할 예약만 적어 주세요. 기존 명단은 그대로 둡니다.'
+      : '양식에 맞게 붙여넣어 주세요.';
+    document.getElementById('loadBtn').textContent = append ? '추가' : '명단 등록';
+    ta.placeholder = append ? PH_ADD : PH_FULL;
     // 명단이 아예 없을 땐 돌아갈 화면이 없으므로 취소 버튼을 숨긴다
     var hasItems = !!(state && state.items && state.items.length);
-    document.getElementById('cancelPaste').classList.toggle('hide', !hasItems);
+    document.getElementById('cancelPaste').classList.toggle('hide', !append && !hasItems);
     ta.value = '';
     clearBad();
     // 「예약 추가」는 별도 팝업으로 띄운다 (본문 흐름을 건드리지 않게)
@@ -1337,16 +1360,55 @@ window.dispatchEvent(new Event('fb-ready'));
     panelScrim.classList.toggle('hide', !append);
     autoGrow();
     panel.classList.remove('hide');
+    if (append) backOpen(hidePaste);
     if (silent) return;
     if (!append) panel.scrollIntoView({behavior:'smooth', block:'center'});
     setTimeout(function(){ ta.focus(); }, 200);
   }
-  function closePaste(){
+  function hidePaste(){
     panel.classList.add('hide');
-    panel.classList.remove('asSheet');
+    panel.classList.remove('asSheet', 'kb');
     panelScrim.classList.add('hide');
     appendMode = false;
   }
+  function closePaste(){ hidePaste(); backDone(); }
+
+  /* ---------- 키보드 ---------- */
+  // 키보드가 올라오면 화면 아래쪽이 가려진다.
+  // 시트와 확인창을 가려진 높이만큼 위로 올려 버튼이 늘 보이게 한다.
+  var vv = window.visualViewport;
+  function kbFit(){
+    if (!vv) return;
+    var kb = window.innerHeight - vv.height - vv.offsetTop;
+    if (!(kb > 80)) kb = 0;            // 주소창이 접히는 정도의 변화는 무시
+    document.documentElement.style.setProperty('--kb', Math.round(kb) + 'px');
+    panel.classList.toggle('kb', kb > 0);
+    if (!panel.classList.contains('hide')) autoGrow();
+  }
+  if (vv){
+    vv.addEventListener('resize', kbFit);
+    vv.addEventListener('scroll', kbFit);
+  }
+
+  /* ---------- 뒤로가기 ---------- */
+  // 앱 모드에서는 뒤로가기를 누르면 앱이 그대로 꺼진다.
+  // 서랍·시트·팝업이 열려 있으면 그것부터 닫는다. (아이폰의 화면 끝 쓸기도 같다)
+  var backClose = null;
+  function backOpen(fn){
+    if (backClose){ backClose = fn; return; }   // 서랍 → 시트처럼 갈아탈 땐 기록을 늘리지 않는다
+    backClose = fn;
+    try { history.pushState({ ov: 1 }, ''); } catch(e){}
+  }
+  function backDone(){                           // 화면에서 직접 닫았을 때
+    if (!backClose) return;
+    backClose = null;
+    if (history.state && history.state.ov){ try { history.back(); } catch(e){} }
+  }
+  window.addEventListener('popstate', function(){
+    if (!backClose) return;
+    var fn = backClose; backClose = null;
+    fn();
+  });
 
   var scrim = document.getElementById('scrim');
   function confirmDlg(title, onYes){
@@ -1360,11 +1422,13 @@ window.dispatchEvent(new Event('fb-ready'));
     setTimeout(function(){ inp.focus(); }, 150);
 
     function ok(){ return inp.value.trim() === '예'; }
-    function done(){
+    function hide(){
       scrim.classList.add('hide');
       yes.onclick = null; no.onclick = null; scrim.onclick = null;
       inp.oninput = null; inp.onkeydown = null;
     }
+    function done(){ hide(); backDone(); }
+    backOpen(hide);
     inp.oninput = function(){ yes.disabled = !ok(); };
     inp.onkeydown = function(e){ if (e.key === 'Enter' && ok()){ done(); onYes(); } };
     yes.onclick = function(){ if (ok()){ done(); onYes(); } };
@@ -1475,15 +1539,17 @@ window.dispatchEvent(new Event('fb-ready'));
   var drawer = document.getElementById('drawer');
   var drawerScrim = document.getElementById('drawerScrim');
 
+  function hideDrawer(){
+    drawer.classList.remove('open');
+    drawerScrim.classList.add('off');
+  }
   function openDrawer(){
     renderDrawerDays();
-    drawerScrim.classList.remove('hide');
+    drawerScrim.classList.remove('off');
     drawer.classList.add('open');
+    backOpen(hideDrawer);
   }
-  function closeDrawer(){
-    drawer.classList.remove('open');
-    drawerScrim.classList.add('hide');
-  }
+  function closeDrawer(){ hideDrawer(); backDone(); }
   document.getElementById('menuBtn').addEventListener('click', openDrawer);
   drawerScrim.addEventListener('click', closeDrawer);
 
@@ -1534,13 +1600,15 @@ window.dispatchEvent(new Event('fb-ready'));
     document.getElementById('sheetTitle').textContent = title;
     document.getElementById('sheetBody').innerHTML = html;
     sheetScrim.classList.remove('hide');
+    backOpen(hideSheet);
   }
-  function closeSheet(){ sheetScrim.classList.add('hide'); }
+  function hideSheet(){ sheetScrim.classList.add('hide'); }
+  function closeSheet(){ hideSheet(); backDone(); }
   document.getElementById('sheetClose').addEventListener('click', closeSheet);
   sheetScrim.addEventListener('click', function(e){ if (e.target === sheetScrim) closeSheet(); });
 
   document.getElementById('faqBtn').addEventListener('click', function(){
-    closeDrawer();
+    hideDrawer();
     openSheet('자주 묻는 질문',
       '<div class="qa"><div class="q">상단 시간은 언제 넘어가나요?</div>'
       + '<div class="a">정각 예약은 11분, 그 외에는 4분이 지나면 다음 시간대로 넘어갑니다.\n'
@@ -1555,7 +1623,7 @@ window.dispatchEvent(new Event('fb-ready'));
   });
 
   document.getElementById('installBtn').addEventListener('click', function(){
-    closeDrawer();
+    hideDrawer();
     var standalone = false;
     try {
       standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
