@@ -404,10 +404,46 @@
   .qa{margin:0 0 18px}
   .qa .q{font-size:14.5px;font-weight:700;color:var(--wait);margin-bottom:6px}
   .qa .a{font-size:14px;line-height:1.65;color:var(--dim);white-space:pre-line}
-  .howto{margin:0 0 16px}
-  .howto .h{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:5px}
-  .howto .s{font-size:14px;line-height:1.6;color:var(--dim)}
-  .howto .s b{color:var(--text);font-weight:600}
+  /* 설치 안내 — 기기별 카드 */
+  .plat{
+    background:var(--panel2);border:1px solid var(--line);
+    border-left:3px solid var(--off);border-radius:12px;
+    padding:12px 14px 11px;margin:0 0 10px;
+  }
+  .plat.ios{border-left-color:var(--wait)}
+  .plat.and{border-left-color:var(--go)}
+  .plat .ph{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+  .plat .pn{font-size:14.5px;font-weight:800;letter-spacing:-.02em}
+  .plat.ios .pn{color:var(--wait)}
+  .plat.and .pn{color:var(--go)}
+  .plat .me{
+    font-size:10.5px;font-weight:800;color:var(--ink);
+    padding:2px 6px;border-radius:5px;letter-spacing:.02em;line-height:1.5;
+  }
+  .plat.ios .me{background:var(--wait)}
+  .plat.and .me{background:var(--go)}
+  .step{
+    display:flex;align-items:center;gap:9px;
+    padding:4.5px 0;font-size:13.5px;color:var(--dim);line-height:1.35;
+  }
+  .step .n{
+    width:17px;height:17px;flex:0 0 auto;border-radius:50%;
+    background:var(--line);color:var(--dim);
+    font-size:10px;font-weight:800;display:grid;place-items:center;line-height:1;
+  }
+  .step b{color:var(--text);font-weight:700}
+  .key{
+    display:inline-grid;place-items:center;
+    min-width:25px;height:22px;padding:0 5px;margin:0 1px;
+    border:1px solid var(--line);border-radius:6px;background:var(--ink);
+    font-size:15px;font-weight:800;color:var(--text);line-height:1;
+    vertical-align:-5px;
+  }
+  .sheetWarn{
+    font-size:12.5px;line-height:1.6;color:var(--dim);
+    border-top:1px solid var(--line);padding-top:11px;margin:14px 0 12px;
+  }
+  .sheetWarn b{color:var(--warn);font-weight:700}
   .sheetNote{font-size:13px;line-height:1.6;color:var(--go);margin:0 0 14px}
   .sheetClose{
     width:100%;padding:13px 0;margin-top:2px;border-radius:11px;
@@ -1258,6 +1294,7 @@ window.dispatchEvent(new Event('fb-ready'));
       var t = esc(line) || ' ';
       return '<span class="ln' + (nos[i+1] ? ' err' : '') + '">' + t + '</span>';
     }).join('');
+    hl.scrollTop = taEl.scrollTop;   // 다시 그리면 스크롤이 풀린다 — 입력칸에 맞춘다
   }
   function showBad(bad){
     marking = true;
@@ -1283,11 +1320,21 @@ window.dispatchEvent(new Event('fb-ready'));
   // 입력칸을 벗어나면 치던 줄도 다시 검사한다
   taEl.addEventListener('scroll', function(){ hl.scrollTop = taEl.scrollTop; });
 
-  // 붙여넣으면 커서가 맨 끝으로 가면서 입력칸과 화면이 같이 밀려 올라간다.
-  // 명단은 위에서부터 확인하는 게 자연스러우니 처음으로 되돌린다.
+  // 빈 칸에 명단을 통째로 붙여넣은 거라면 위에서부터 확인하는 게 자연스러우니
+  // 커서와 화면을 처음으로 되돌린다.
+  // 이미 적어둔 내용이 있으면 중간에 끼워 넣은 것이므로 커서를 그 자리에 둔다.
   taEl.addEventListener('paste', function(){
+    var wasEmpty = !taEl.value.trim();
     setTimeout(function(){
       autoGrow();
+      if (!wasEmpty){
+        var pos = taEl.selectionStart;
+        try { taEl.setSelectionRange(pos, pos); } catch(e){}   // 커서를 화면 안으로
+        hl.scrollTop = taEl.scrollTop;
+        // 커서 따라 스크롤되는 건 한 박자 뒤라 오버레이도 그때 맞춘다
+        requestAnimationFrame(function(){ hl.scrollTop = taEl.scrollTop; });
+        return;
+      }
       try { taEl.setSelectionRange(0, 0); } catch(e){}
       taEl.scrollTop = 0;
       hl.scrollTop = 0;
@@ -1622,6 +1669,17 @@ window.dispatchEvent(new Event('fb-ready'));
       + '연결이 끊기면 상단에 빨갛게 표시되고, 그동안 체크한 것도 다시 연결되면 올라갑니다.</div></div>');
   });
 
+  // 기기 한 칸 = 이름 + 번호 붙은 세 단계
+  function plat(cls, name, isMe, steps){
+    return '<div class="plat ' + cls + '">'
+      + '<div class="ph"><span class="pn">' + name + '</span>'
+      + (isMe ? '<span class="me">이 기기</span>' : '') + '</div>'
+      + steps.map(function(t, i){
+          return '<div class="step"><span class="n">' + (i + 1) + '</span><span>' + t + '</span></div>';
+        }).join('')
+      + '</div>';
+  }
+
   document.getElementById('installBtn').addEventListener('click', function(){
     hideDrawer();
     var standalone = false;
@@ -1633,11 +1691,24 @@ window.dispatchEvent(new Event('fb-ready'));
       openSheet('앱으로 설치하기', '<p class="sheetNote">이미 앱으로 실행 중입니다.</p>');
       return;
     }
+    // 쓰는 기기의 안내를 위로 올린다
+    var ua = navigator.userAgent || '';
+    var isiOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
+    var isAnd = /Android/.test(ua);
+    var ios = plat('ios', '아이폰 · 사파리', isiOS, [
+      '화면 <b>아래 오른쪽</b> <span class="key">⋯</span>',
+      '<b>공유</b>',
+      '<b>홈 화면에 추가</b>'
+    ]);
+    var and = plat('and', '갤럭시 · 크롬', isAnd, [
+      '화면 <b>위 오른쪽</b> <span class="key">⋮</span>',
+      '<b>설치 및 바로가기 만들기</b>',
+      '<b>설치</b>'
+    ]);
     openSheet('앱으로 설치하기',
-      '<div class="howto"><div class="h">아이폰 · 사파리</div>'
-      + '<div class="s">하단 <b>⋯</b> → <b>공유</b> → <b>홈 화면에 추가</b></div></div>'
-      + '<div class="howto"><div class="h">갤럭시 · 크롬</div>'
-      + '<div class="s">우측 위 <b>⋮</b> → <b>설치 및 바로가기 만들기</b> → <b>설치</b></div></div>');
+      (isAnd ? and + ios : ios + and)
+      + '<p class="sheetWarn">전에 홈 화면에 추가해 둔 아이콘이 있으면 <b>먼저 지우고</b> 다시 추가해 주세요. 예전 아이콘은 그대로 두면 브라우저로 열립니다.</p>'
+      + '<p class="sheetNote">주소창 없이 열리면 제대로 설치된 거예요.</p>');
   });
 
   function reloadPage(){ try { window.location.reload(); } catch(e){} }
