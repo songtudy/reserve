@@ -386,8 +386,8 @@
   .foot.hide{display:none}
   .foot{
     position:fixed;left:0;right:0;bottom:0;z-index:30;
-    background:var(--headBg);
-    backdrop-filter:blur(10px);
+    /* 반투명 + 흐림 처리를 쓰면 아이폰에서 고정 위치가 어긋난다. 불투명하게 둔다 */
+    background:var(--ink);
     border-top:1px solid var(--line);
     padding:9px 14px calc(9px + env(safe-area-inset-bottom));
   }
@@ -460,16 +460,19 @@
     color:var(--dim);font-family:inherit;font-size:14px;font-weight:600;text-align:left;
   }
   .dwsub button:active{background:var(--press)}
-  .dwsub button.on{color:var(--text)}
   /* 달 / 해 — 두 줄이 한눈에 갈리게 */
   .dwsub .tico{
     width:27px;height:27px;flex:0 0 auto;display:grid;place-items:center;
     border-radius:9px;border:1px solid var(--line);
-    background:var(--panel);color:var(--off);
+    background:none;color:var(--off);
   }
-  .dwsub button.on{background:var(--panel);color:var(--text);font-weight:700}
+  /* 고른 줄만 금색으로. 바탕색은 건드리지 않는다 —
+     테마에 따라 밝기가 뒤집혀서 안 고른 쪽이 켜진 것처럼 보였다 */
+  .dwsub button.on{
+    color:var(--text);font-weight:700;
+    box-shadow:inset 3px 0 0 var(--wait);
+  }
   .dwsub button.on .tico{background:var(--mark);border-color:transparent;color:var(--waitTx)}
-  .dwsub button.on{box-shadow:inset 3px 0 0 var(--wait)}
   .dwsub .chk{margin-left:auto;color:var(--waitTx);font-weight:800;opacity:0}
   .dwsub button.on .chk{opacity:1}
   .dwsep.push{margin-top:auto}
@@ -537,8 +540,8 @@
   .plat.ios .pn{color:var(--waitTx)}
   .plat.and .pn{color:var(--goTx)}
   .step{
-    display:flex;align-items:center;gap:9px;
-    padding:4.5px 0;font-size:13.5px;color:var(--dim);line-height:1.35;
+    display:flex;align-items:center;gap:9px;min-height:30px;
+    padding:3px 0;font-size:13.5px;color:var(--dim);line-height:1.35;
   }
   .step .n{
     width:17px;height:17px;flex:0 0 auto;border-radius:50%;
@@ -551,13 +554,17 @@
     min-width:25px;height:22px;padding:0 5px;margin:0 1px;
     border:1px solid var(--line);border-radius:6px;background:var(--ink);
     font-size:15px;font-weight:800;color:var(--text);line-height:1;
-    vertical-align:-5px;
+    vertical-align:middle;
   }
   .sheetNote{font-size:13px;line-height:1.6;color:var(--goTx);margin:0 0 14px;white-space:pre-line}
   .sheetNote.plain{color:var(--dim)}
   .about{font-size:14px;line-height:1.75;color:var(--dim);margin:0 0 12px}
   .about:last-of-type{margin-bottom:16px}
   .about b{color:var(--text);font-weight:700}
+  .credit{
+    border-top:1px solid var(--line);padding-top:12px;margin:16px 0 14px;
+    font-size:12px;line-height:1.6;color:var(--off);letter-spacing:.01em;
+  }
   .sheetClose{
     width:100%;padding:13px 0;margin-top:2px;border-radius:11px;
     border:1px solid var(--line);background:var(--panel2);
@@ -1184,6 +1191,8 @@ window.dispatchEvent(new Event('fb-ready'));
 
     var hd = document.querySelector('header');
     if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
+
+    if (typeof pinFoot === 'function') requestAnimationFrame(pinFoot);
   }
 
   function rowEl(it){
@@ -1766,12 +1775,28 @@ window.dispatchEvent(new Event('fb-ready'));
     render();
   });
 
+  /* ---------- 하단 바 위치 ---------- */
+  // 아이폰에서 position:fixed 하단 바가 화면 아래에 딱 붙지 않고 떠 있는 경우가 있다.
+  // 짐작하지 말고 실제 위치를 재서 어긋난 만큼만 내려준다.
+  // 제대로 붙어 있는 브라우저에서는 어긋남이 0이라 아무 일도 하지 않는다.
+  var footEl = document.querySelector('.foot');
+  function pinFoot(){
+    if (!footEl || footEl.classList.contains('hide')) return;
+    footEl.style.transform = '';
+    var want = document.documentElement.clientHeight;   // 레이아웃 뷰포트 바닥
+    var off = Math.round(want - footEl.getBoundingClientRect().bottom);
+    if (Math.abs(off) > 1) footEl.style.transform = 'translateY(' + off + 'px)';
+  }
+  window.addEventListener('resize', pinFoot);
+  window.addEventListener('orientationchange', function(){ setTimeout(pinFoot, 250); });
+
   /* ---------- 앱 복귀 ---------- */
   // 앱을 다시 열면 그동안 다른 사람이 체크한 내용을 받아온다.
   // 레이아웃은 건드리지 않는다 (건드렸다가 하단 바가 엉뚱한 자리에 고정된 적이 있다).
   document.addEventListener('visibilitychange', function(){
     if (document.hidden) return;
     document.documentElement.style.setProperty('--kb', '0px');
+    requestAnimationFrame(pinFoot);
     if (typeof sync === 'function') sync();
   });
 
@@ -2013,7 +2038,8 @@ window.dispatchEvent(new Event('fb-ready'));
       + '<p class="about">누가 체크하든 <b>모든 직원 화면에 바로 반영</b>됩니다. '
       + '한 명이 손님을 받으면 나머지 사람 화면에서도 곧바로 체크된 것으로 보입니다.</p>'
       + '<p class="about">아래 <b>명단 복사</b>를 누르면 단톡방에 올리던 양식 그대로 복사됩니다. '
-      + '붙여넣기만 하면 됩니다.</p>');
+      + '붙여넣기만 하면 됩니다.</p>'
+      + '<p class="credit">Made by Jumin Labs<br>© 2026 Jumin Labs</p>');
   });
 
   // 브라우저로 처음 들어온 사람에게 한 번 권한다
