@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0f1319">
-<meta name="color-scheme" id="metaScheme" content="dark light">
+<meta name="color-scheme" content="dark light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -41,7 +41,8 @@
     --headBg:rgba(15,19,25,.96);
     --scrim:rgba(6,9,13,.72);   --scrimLite:rgba(6,9,13,.6);
     /* 대기 — 금색. 칠할 때와 글자일 때를 나눈다 (밝은 테마에서 대비가 달라서) */
-    --wait:#e8b757;     --waitTx:#e8b757;   --onWait:#241a05;   --mark:#463a13;
+    --wait:#e8b757;     --waitTx:#e8b757;   --waitBig:#e8b757;
+    --onWait:#241a05;   --mark:#463a13;
     /* 방문 — 초록 */
     --go:#5fb08a;       --goTx:#5fb08a;     --onGo:#08241a;
     --goBg:#141d19;     --goLine:#26382f;   --goTag:#1b2f27;
@@ -60,7 +61,9 @@
     --ph:#a3acb9;       --disTx:#a8b0bb;
     --headBg:rgba(244,246,249,.96);
     --scrim:rgba(20,26,34,.44); --scrimLite:rgba(20,26,34,.34);
-    --wait:#d99f2b;     --waitTx:#85590a;   --onWait:#2a1d02;   --mark:#fbe6b4;
+    /* 큰 글씨(상단 시간)는 대비 기준이 느슨해 더 밝은 금색을 쓸 수 있다 */
+    --wait:#d99f2b;     --waitTx:#8f6208;   --waitBig:#a3730f;
+    --onWait:#2a1d02;   --mark:#fcecc4;
     --go:#2f9c6e;       --goTx:#1c7550;     --onGo:#ffffff;
     --goBg:#eefaf3;     --goLine:#b9e3ce;   --goTag:#d9f2e5;
     --goTagTx:#1a6e4b;  --goName:#4a6a5b;
@@ -71,10 +74,9 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:var(--ink)}
-  html{min-height:100%}
-  html{overscroll-behavior:none}
-  body{min-height:100vh;min-height:100dvh;overscroll-behavior:none}
+  html{min-height:100%;overscroll-behavior:none}
   body{
+    overscroll-behavior:none;
     background:var(--ink);
     color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,"Noto Sans KR",system-ui,sans-serif;
@@ -136,14 +138,11 @@
 
   /* 인라인 흐름 — 자리가 모자란 조각만 다음 줄로 넘어간다 */
   .lead{display:block;margin-top:8px;line-height:1.5}
-  /* 「12:00 예약」과 「3팀 2인 1팀…」 두 덩어리로 읽히게 한다 */
-  .slottime{margin-right:2px}
-  .slotlab{margin-right:14px}
-  .leadmain{margin-right:1px}
   .lead.hide{display:none}
-  .slotlab{font-size:11.5px;font-weight:700;letter-spacing:.08em;color:var(--dim)}
-  .slottime{font-size:22px;font-weight:800;color:var(--waitTx);letter-spacing:-.03em}
-  .leadmain{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.02em}
+  /* 「12:00 예약」과 「3팀 2인 1팀…」 두 덩어리로 읽히게 여백을 나눈다 */
+  .slotlab{font-size:11.5px;font-weight:700;letter-spacing:.08em;color:var(--dim);margin-right:14px}
+  .slottime{font-size:22px;font-weight:800;color:var(--waitBig);letter-spacing:-.03em;margin-right:2px}
+  .leadmain{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.02em;margin-right:1px}
   .leadmain.done{font-size:16px;font-weight:650;color:var(--goTx)}
   /* 인원 요약은 자리가 모자란 조각만 다음 줄로 내린다 */
   .leadsub{font-size:13.5px;font-weight:600;color:var(--dim);display:inline}
@@ -201,12 +200,13 @@
   }
   .chev svg{display:block}
   .group.shut .chev{transform:rotate(0)}
-  .gtime{font-size:18px;font-weight:800;letter-spacing:-.02em;color:var(--dim)}
+  /* 19px 굵게 = 큰 글씨 기준이 적용돼 밝은 금색을 쓸 수 있다 */
+  .gtime{font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--dim)}
   .gline{flex:1;height:1px;background:var(--line)}
   .gmeta{font-size:12.5px;color:var(--dim);display:flex;align-items:center;gap:7px}
   .gmeta b{font-weight:800;color:var(--text)}
   .gbreak{color:var(--dim);font-size:11.5px}
-  .group.now .gtime{color:var(--waitTx)}
+  .group.now .gtime{color:var(--waitBig)}
   .group.now .row{border-left-color:var(--wait)}
   .group.done .gtime{opacity:.6}
   .group.done .gmeta b{color:var(--goTx)}
@@ -1453,10 +1453,6 @@ window.dispatchEvent(new Event('fb-ready'));
     taEl.style.overflowY = (taEl.scrollHeight > h + 2) ? 'auto' : 'hidden';
     hl.scrollTop = taEl.scrollTop;
   }
-  window.addEventListener('resize', function(){
-    var pnl = document.getElementById('pastePanel');
-    if (pnl && !pnl.classList.contains('hide')) autoGrow();
-  });
   function clearBad(){
     marking = false;
     // 자리는 비워둔 채로. 오류 표시가 사라지며 버튼이 튀어오르면 고치는 중에 잘못 눌린다.
@@ -1808,8 +1804,6 @@ window.dispatchEvent(new Event('fb-ready'));
     var scrollable = document.documentElement.scrollHeight > viewportH() + 1;
     footEl.classList.toggle('flow', !scrollable);
   }
-  window.addEventListener('resize', footMode);
-
   /* ---------- 화면 높이 ---------- */
   // CSS 단위(dvh)가 틀리게 나오는 기기가 있어 실제 뷰포트 높이로 한 번 더 맞춘다.
   // 아이폰은 실행마다 화면 높이를 다르게 준다 (상태바 59pt 를 빼기도 하고 안 빼기도 한다).
@@ -1829,20 +1823,10 @@ window.dispatchEvent(new Event('fb-ready'));
     footMode();
   }
   fitHeight();
-  window.addEventListener('resize', function(){ fitHeight(); footMode(); });
+  // 입력칸 높이는 창을 열 때 정해두므로 여기서 다시 계산할 게 없다
+  window.addEventListener('resize', fitHeight);    // 안에서 footMode 까지 부른다
   window.addEventListener('orientationchange', function(){ setTimeout(fitHeight, 250); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', fitHeight);
-
-  /* ---------- 앱 복귀 ---------- */
-  // 앱을 다시 열면 그동안 다른 사람이 체크한 내용을 받아온다.
-  // 레이아웃은 건드리지 않는다 (건드렸다가 하단 바가 엉뚱한 자리에 고정된 적이 있다).
-  document.addEventListener('visibilitychange', function(){
-    if (document.hidden) return;
-    document.documentElement.style.setProperty('--kb', '0px');
-    fitHeight();
-    footMode();
-    if (typeof sync === 'function') sync();
-  });
 
   /* ---------- 테마 ---------- */
   // 다크가 기본. 라이트를 고른 사람만 저장값이 남는다.
@@ -2000,25 +1984,25 @@ window.dispatchEvent(new Event('fb-ready'));
   var FAQ = [
     ['메모는 어떻게 다나요?', 1,
       '예약 추가할 때 <em>메모</em> 칸에 적거나, 이름 오른쪽 ⋯ → <em>수정</em>에서 넣습니다.\n'
-      + '창가석 요청, 인플루언서, 강아지 동반처럼 짧게.\n'
+      + '창가석 요청, 인플루언서처럼 짧게 적으면 됩니다.\n'
       + '이름 아래에 노란 글씨로 보이고, 명단 복사에는 들어가지 않습니다.'],
-    ['예약을 잘못 넣었어요', 0,
+    ['예약을 고치거나 지우려면?', 0,
       '이름 오른쪽 ⋯ 을 누르면 <em>방문 · 취소 · 수정 · 삭제</em>가 나옵니다.\n'
       + '시간을 고치면 그 시간대로 옮겨갑니다.'],
     ['시간대는 언제 접히나요?', 0,
       '남은 팀이 없으면 접힙니다. 마지막 한 팀을 체크하고 3초 뒤에.\n'
       + '체크를 풀면 다시 펼쳐집니다.\n'
-      + '직접 접거나 편 것은 그대로 두고, 남은 팀이 생기거나 없어질 때만 정리합니다.'],
+      + '직접 접거나 편 것은 그대로 둡니다.'],
     ['맨 위 시간은 언제 넘어가나요?', 0,
       '그 시간대를 다 체크하면 바로 넘어갑니다.\n'
-      + '아니면 정각 예약은 11분, 그 외에는 4분 뒤에.\n'
-      + '15:00 → 15:11, 15:20 → 15:24.'],
+      + '아니면 정각 예약은 11분, 그 외에는 4분이 지나면 넘어갑니다.\n'
+      + '15:00은 15:11에, 15:20은 15:24에.'],
     ['다른 사람이 체크한 게 바로 보이나요?', 0,
-      '1초 안에 반영됩니다.\n'
+      '1초 안에 보입니다.\n'
       + '연결이 끊기면 맨 위에 빨갛게 표시되고, 끊긴 동안 체크한 것도 다시 연결되면 올라갑니다.'],
     ['날짜는 언제 바뀌나요?', 0,
       '자정에 바뀝니다.\n'
-      + '어제 명단은 왼쪽 위 메뉴에서 볼 수 있고, 이틀 지나면 삭제됩니다.']
+      + '어제 명단은 왼쪽 위 메뉴에서 볼 수 있고, 이틀 지나면 지워집니다.']
   ];
   var CHEV = '<span class="qchev"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L16 12 L9 19"/></svg></span>';
 
@@ -2088,11 +2072,9 @@ window.dispatchEvent(new Event('fb-ready'));
   document.getElementById('aboutBtn').addEventListener('click', function(){
     hideDrawer();
     openSheet('익순이란?',
-      '<p class="about">익선취향 예약자 관리 앱입니다.</p>'
-      + '<p class="about">누가 체크하든 <b>모든 직원 화면에 바로 반영</b>됩니다. '
-      + '한 명이 손님을 받으면 나머지 사람 화면에서도 곧바로 체크된 것으로 보입니다.</p>'
-      + '<p class="about">아래 <b>명단 복사</b>를 누르면 단톡방에 올리던 양식 그대로 복사됩니다. '
-      + '붙여넣기만 하면 됩니다.</p>'
+      '<p class="about">익선취향 예약 명단을 직원들이 함께 보고 체크하는 앱입니다.</p>'
+      + '<p class="about">모든 변경사항은 <b>직원 전체 화면에 실시간으로 반영</b>됩니다.</p>'
+      + '<p class="about">아래 <b>명단 복사</b>를 누르면 단톡방에 올리던 양식 그대로 복사됩니다.</p>'
       + '<p class="credit">Made by Jumin Labs<br>© 2026 Jumin Labs</p>');
   });
 
@@ -2203,7 +2185,10 @@ window.dispatchEvent(new Event('fb-ready'));
 
   // 화면으로 돌아오면 한 번 확인 (실시간 수신은 watchRemote가 담당)
   document.addEventListener('visibilitychange', function(){
-    if (document.hidden || !state) return;
+    if (document.hidden) return;
+    document.documentElement.style.setProperty('--kb', '0px');
+    fitHeight();     // 화면 높이가 달라졌을 수 있다
+    if (!state) return;
     sync();          // 즉시 최신 상태 확인
     watchRemote();   // 백그라운드에서 끊겼을 수 있으니 실시간 수신도 다시 건다
     // 3초 안에 연결이 안 돌아오면 소켓을 강제로 다시 붙인다
