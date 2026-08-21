@@ -402,6 +402,10 @@
     border-top:1px solid var(--line);
     padding:9px 14px calc(9px + env(safe-area-inset-bottom));
   }
+  /* 스크롤이 없는 화면에서는 sticky 를 쓰지 않는다.
+     아이폰이 목록이 짧아진 뒤 sticky 위치를 다시 계산하지 않아 하단 바가 떠 있었다.
+     스크롤이 없으면 흐름 맨 끝 = 화면 바닥이라 sticky 가 할 일도 없다. */
+  .foot.flow{position:static}
   .foot .inner{max-width:640px;margin:0 auto}
   .frow{display:flex;gap:7px}
   .frow + .frow{margin-top:6px}
@@ -1203,6 +1207,8 @@ window.dispatchEvent(new Event('fb-ready'));
 
     var hd = document.querySelector('header');
     if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
+
+    if (typeof footMode === 'function') requestAnimationFrame(footMode);
   }
 
   function rowEl(it){
@@ -1793,6 +1799,16 @@ window.dispatchEvent(new Event('fb-ready'));
     render();
   });
 
+  /* ---------- 하단 바 ---------- */
+  var footEl = document.querySelector('.foot');
+  function footMode(){
+    if (!footEl) return;
+    void document.body.offsetHeight;                 // 레이아웃을 다시 계산하게 만든다
+    var scrollable = document.documentElement.scrollHeight > window.innerHeight + 1;
+    footEl.classList.toggle('flow', !scrollable);
+  }
+  window.addEventListener('resize', footMode);
+
   /* ---------- 화면 높이 ---------- */
   // CSS 단위(dvh)가 틀리게 나오는 기기가 있어 실제 뷰포트 높이로 한 번 더 맞춘다.
   function fitHeight(){
@@ -1800,7 +1816,7 @@ window.dispatchEvent(new Event('fb-ready'));
     if (h > 0) document.body.style.minHeight = h + 'px';
   }
   fitHeight();
-  window.addEventListener('resize', fitHeight);
+  window.addEventListener('resize', function(){ fitHeight(); footMode(); });
   window.addEventListener('orientationchange', function(){ setTimeout(fitHeight, 250); });
 
   /* ---------- 앱 복귀 ---------- */
@@ -1810,6 +1826,7 @@ window.dispatchEvent(new Event('fb-ready'));
     if (document.hidden) return;
     document.documentElement.style.setProperty('--kb', '0px');
     fitHeight();
+    footMode();
     if (typeof sync === 'function') sync();
   });
 
@@ -2077,6 +2094,7 @@ window.dispatchEvent(new Event('fb-ready'));
         + ' / body ' + Math.round(document.body.getBoundingClientRect().height)
         + ' / safe ' + cs.getPropertyValue('padding-bottom')
         + ' / minH ' + document.body.style.minHeight
+        + ' / mode ' + (document.querySelector('.foot').classList.contains('flow') ? 'flow' : 'sticky')
         + ' / dpr ' + window.devicePixelRatio;
     }
   });
