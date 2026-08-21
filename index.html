@@ -136,10 +136,10 @@
 
   /* 인라인 흐름 — 자리가 모자란 조각만 다음 줄로 넘어간다 */
   .lead{display:block;margin-top:8px;line-height:1.5}
-  /* 「예약 3팀」이 한 덩어리로 읽히게 — 시간과 상세 쪽에만 여백을 준다 */
-  .slottime{margin-right:12px}
-  .slotlab{margin-right:0}
-  .leadmain{margin-right:12px}
+  /* 「12:00 예약」과 「3팀 2인 1팀…」 두 덩어리로 읽히게 한다 */
+  .slottime{margin-right:2px}
+  .slotlab{margin-right:14px}
+  .leadmain{margin-right:1px}
   .lead.hide{display:none}
   .slotlab{font-size:11.5px;font-weight:700;letter-spacing:.08em;color:var(--dim)}
   .slottime{font-size:22px;font-weight:800;color:var(--waitTx);letter-spacing:-.03em}
@@ -2093,25 +2093,7 @@ window.dispatchEvent(new Event('fb-ready'));
       + '한 명이 손님을 받으면 나머지 사람 화면에서도 곧바로 체크된 것으로 보입니다.</p>'
       + '<p class="about">아래 <b>명단 복사</b>를 누르면 단톡방에 올리던 양식 그대로 복사됩니다. '
       + '붙여넣기만 하면 됩니다.</p>'
-      + '<p class="credit">Made by Jumin Labs<br>© 2026 Jumin Labs</p>'
-      + '<p class="credit" id="diag" style="margin-top:-6px"></p>');
-    var d = document.getElementById('diag');
-    if (d){
-      var vv = window.visualViewport;
-      var f = document.querySelector('.foot').getBoundingClientRect();
-      var cs = getComputedStyle(document.body);
-      d.textContent = 'screen ' + screen.height + ' / inner ' + window.innerHeight
-        + ' / client ' + document.documentElement.clientHeight
-        + ' / vv ' + (vv ? Math.round(vv.height) + '+' + Math.round(vv.offsetTop) : '-')
-        + ' / doc ' + Math.round(document.documentElement.scrollHeight)
-        + ' / foot ' + Math.round(f.top) + '~' + Math.round(f.bottom)
-        + ' / body ' + Math.round(document.body.getBoundingClientRect().height)
-        + ' / safe ' + cs.getPropertyValue('padding-bottom')
-        + ' / minH ' + document.body.style.minHeight
-        + ' / mode ' + (document.querySelector('.foot').classList.contains('flow') ? 'flow' : 'sticky')
-        + ' / bar ' + document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content
-        + ' / dpr ' + window.devicePixelRatio;
-    }
+      + '<p class="credit">Made by Jumin Labs<br>© 2026 Jumin Labs</p>');
   });
 
   // 브라우저로 처음 들어온 사람에게 한 번 권한다
