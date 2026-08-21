@@ -72,7 +72,7 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:var(--ink)}
   html{min-height:100%}
-  html{overscroll-behavior:none;height:100%;height:-webkit-fill-available}
+  html{overscroll-behavior:none}
   body{min-height:100vh;min-height:100dvh;overscroll-behavior:none}
   body{
     background:var(--ink);
@@ -81,10 +81,9 @@
     font-size:16px;
     line-height:1.4;
     display:flex;flex-direction:column;
-    /* 아이폰 앱 모드에서 100dvh 가 안전영역만큼 짧게 나오는 일이 있다.
-       그러면 흐름 맨 끝의 하단 바가 화면 바닥에 못 닿는다.
-       -webkit-fill-available 이 실제로 쓸 수 있는 높이를 준다. */
-    min-height:100vh;min-height:100dvh;min-height:-webkit-fill-available;
+    /* 실제 높이는 아래 fitHeight() 가 픽셀로 다시 잡아준다.
+       아이폰이 CSS 높이 단위를 상태바만큼 짧게 주는 경우가 있어서다. */
+    min-height:100vh;min-height:100dvh;
     -webkit-font-smoothing:antialiased;
     touch-action:manipulation;        /* 두 번 탭 확대 방지 */
     -webkit-text-size-adjust:100%;
@@ -1806,20 +1805,36 @@ window.dispatchEvent(new Event('fb-ready'));
   function footMode(){
     if (!footEl) return;
     void document.body.offsetHeight;                 // 레이아웃을 다시 계산하게 만든다
-    var scrollable = document.documentElement.scrollHeight > window.innerHeight + 1;
+    var scrollable = document.documentElement.scrollHeight > viewportH() + 1;
     footEl.classList.toggle('flow', !scrollable);
   }
   window.addEventListener('resize', footMode);
 
   /* ---------- 화면 높이 ---------- */
   // CSS 단위(dvh)가 틀리게 나오는 기기가 있어 실제 뷰포트 높이로 한 번 더 맞춘다.
+  // 아이폰은 실행마다 화면 높이를 다르게 준다 (상태바 59pt 를 빼기도 하고 안 빼기도 한다).
+  // 게다가 확정되는 시점이 늦어서, 켜자마자 잰 값이 나중 값과 다르다.
+  // 그래서 여러 측정값 중 가장 큰 것을 쓰고, 켠 뒤 잠깐 동안 여러 번 다시 잰다.
+  function viewportH(){
+    var vv = window.visualViewport;
+    return Math.max(
+      window.innerHeight || 0,
+      document.documentElement.clientHeight || 0,
+      vv ? Math.round(vv.height + vv.offsetTop) : 0
+    );
+  }
   function fitHeight(){
-    var h = window.innerHeight || 0;
-    if (h > 0) document.body.style.minHeight = h + 'px';
+    var h = viewportH();
+    if (h > 0 && document.body.style.minHeight !== h + 'px'){
+      document.body.style.minHeight = h + 'px';
+      footMode();
+    }
   }
   fitHeight();
+  [60, 300, 800, 2000].forEach(function(ms){ setTimeout(fitHeight, ms); });
   window.addEventListener('resize', function(){ fitHeight(); footMode(); });
   window.addEventListener('orientationchange', function(){ setTimeout(fitHeight, 250); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', fitHeight);
 
   /* ---------- 앱 복귀 ---------- */
   // 앱을 다시 열면 그동안 다른 사람이 체크한 내용을 받아온다.
