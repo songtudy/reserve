@@ -70,7 +70,7 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0;background:var(--ink)}
   html{min-height:100%}
-  html{overscroll-behavior:none}
+  html{overscroll-behavior:none;height:100%;height:-webkit-fill-available}
   body{min-height:100vh;min-height:100dvh;overscroll-behavior:none}
   body{
     background:var(--ink);
@@ -79,7 +79,10 @@
     font-size:16px;
     line-height:1.4;
     display:flex;flex-direction:column;
-    min-height:100vh;min-height:100dvh;
+    /* 아이폰 앱 모드에서 100dvh 가 안전영역만큼 짧게 나오는 일이 있다.
+       그러면 흐름 맨 끝의 하단 바가 화면 바닥에 못 닿는다.
+       -webkit-fill-available 이 실제로 쓸 수 있는 높이를 준다. */
+    min-height:100vh;min-height:100dvh;min-height:-webkit-fill-available;
     -webkit-font-smoothing:antialiased;
     touch-action:manipulation;        /* 두 번 탭 확대 방지 */
     -webkit-text-size-adjust:100%;
@@ -1790,12 +1793,23 @@ window.dispatchEvent(new Event('fb-ready'));
     render();
   });
 
+  /* ---------- 화면 높이 ---------- */
+  // CSS 단위(dvh)가 틀리게 나오는 기기가 있어 실제 뷰포트 높이로 한 번 더 맞춘다.
+  function fitHeight(){
+    var h = window.innerHeight || 0;
+    if (h > 0) document.body.style.minHeight = h + 'px';
+  }
+  fitHeight();
+  window.addEventListener('resize', fitHeight);
+  window.addEventListener('orientationchange', function(){ setTimeout(fitHeight, 250); });
+
   /* ---------- 앱 복귀 ---------- */
   // 앱을 다시 열면 그동안 다른 사람이 체크한 내용을 받아온다.
   // 레이아웃은 건드리지 않는다 (건드렸다가 하단 바가 엉뚱한 자리에 고정된 적이 있다).
   document.addEventListener('visibilitychange', function(){
     if (document.hidden) return;
     document.documentElement.style.setProperty('--kb', '0px');
+    fitHeight();
     if (typeof sync === 'function') sync();
   });
 
@@ -2062,6 +2076,7 @@ window.dispatchEvent(new Event('fb-ready'));
         + ' / foot ' + Math.round(f.top) + '~' + Math.round(f.bottom)
         + ' / body ' + Math.round(document.body.getBoundingClientRect().height)
         + ' / safe ' + cs.getPropertyValue('padding-bottom')
+        + ' / minH ' + document.body.style.minHeight
         + ' / dpr ' + window.devicePixelRatio;
     }
   });
