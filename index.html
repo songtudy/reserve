@@ -1209,7 +1209,7 @@ window.dispatchEvent(new Event('fb-ready'));
     var hd = document.querySelector('header');
     if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
 
-    if (typeof footMode === 'function') requestAnimationFrame(footMode);
+    if (typeof fitHeight === 'function') requestAnimationFrame(fitHeight);
   }
 
   function rowEl(it){
@@ -1813,8 +1813,8 @@ window.dispatchEvent(new Event('fb-ready'));
   /* ---------- 화면 높이 ---------- */
   // CSS 단위(dvh)가 틀리게 나오는 기기가 있어 실제 뷰포트 높이로 한 번 더 맞춘다.
   // 아이폰은 실행마다 화면 높이를 다르게 준다 (상태바 59pt 를 빼기도 하고 안 빼기도 한다).
-  // 게다가 확정되는 시점이 늦어서, 켜자마자 잰 값이 나중 값과 다르다.
-  // 그래서 여러 측정값 중 가장 큰 것을 쓰고, 켠 뒤 잠깐 동안 여러 번 다시 잰다.
+  // 여러 측정값 중 가장 큰 것을 쓰고, 화면을 다시 그릴 때마다 확인한다.
+  // 하단 바가 나타나는 시점이 곧 다시 그리는 시점이라 어긋난 높이로 보일 틈이 없다.
   function viewportH(){
     var vv = window.visualViewport;
     return Math.max(
@@ -1825,13 +1825,10 @@ window.dispatchEvent(new Event('fb-ready'));
   }
   function fitHeight(){
     var h = viewportH();
-    if (h > 0 && document.body.style.minHeight !== h + 'px'){
-      document.body.style.minHeight = h + 'px';
-      footMode();
-    }
+    if (h > 0) document.body.style.minHeight = h + 'px';
+    footMode();
   }
   fitHeight();
-  [60, 300, 800, 2000].forEach(function(ms){ setTimeout(fitHeight, ms); });
   window.addEventListener('resize', function(){ fitHeight(); footMode(); });
   window.addEventListener('orientationchange', function(){ setTimeout(fitHeight, 250); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', fitHeight);
