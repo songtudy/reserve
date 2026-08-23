@@ -67,7 +67,7 @@
     --go:#2f9c6e;       --goTx:#1d7a54;     --onGo:#ffffff;
     --goBg:#eefaf3;     --goLine:#b9e3ce;   --goTag:#d9f2e5;
     --goTagTx:#1c7853;  --goName:#4a6a5b;
-    --warn:#c0483c;     --warnBg:#fdf1ef;   --warnTag:#fadedb;  --warnTagTx:#a2463c;
+    --warn:#b43f36;     --warnBg:#fdf1ef;   --warnTag:#fadedb;  --warnTagTx:#a2463c;
     --warnName:#855c55; --warnPax:#7a4f48;  --warnPaxBg:#f6e7e5;
     --errBg:#fdf0ee;    --errLine:#f0c8c2;  --errTx:#9e4438;
     --errRow:rgba(192,72,60,.12);
@@ -251,6 +251,9 @@
     flex:1;min-width:0;display:flex;align-items:center;gap:12px;
     padding:14px 12px;
   }
+  /* min-width:0 이 없으면 긴 이름이 있을 때 행이 화면 밖으로 넘친다 */
+  .rbody{flex:1;min-width:0;display:flex;flex-direction:column}
+  .rtop{display:flex;align-items:stretch;min-width:0}
   .check{
     width:28px;height:28px;border-radius:9px;flex:0 0 auto;
     border:2.5px solid var(--off);
@@ -258,7 +261,9 @@
     transition:.15s;
   }
   .check svg{display:block}
-  .who{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+  /* stretch 로 두어야 이름이 칸 폭에 맞춰 «...» 로 줄어든다.
+     flex-start 면 글자 길이만큼 늘어나 인원칸이 화면 밖으로 밀려난다 */
+  .who{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch}
   .memo{
     margin-top:2px;font-size:12px;font-weight:600;line-height:1.3;
     color:var(--waitTx);opacity:.85;text-align:left;
@@ -686,7 +691,7 @@
       </div>
       <div class="tools">
         <span class="dayprog num hide" id="dayProg"></span>
-        <span class="offtag" id="offTag">연결 안 됨</span>
+        <span class="offtag">연결 안 됨</span>
         <button type="button" id="searchBtn" class="off" aria-label="이름 검색">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 L21 21"/>
@@ -1284,10 +1289,10 @@ window.dispatchEvent(new Event('fb-ready'));
     row.className = 'row ' + it.status;
 
     var body = document.createElement('div');
-    body.style.cssText = 'flex:1;display:flex;flex-direction:column';
+    body.className = 'rbody';
 
     var top = document.createElement('div');
-    top.style.cssText = 'display:flex;align-items:stretch';
+    top.className = 'rtop';
 
     // 방문 체크는 왼쪽 체크 칸에서만 된다.
     // 행 전체가 버튼이면 목록을 훑다가 잘못 눌리는 일이 생긴다.
