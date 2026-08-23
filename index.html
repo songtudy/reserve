@@ -157,7 +157,8 @@
   .slotlab{font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--dim);margin-right:14px}
   .slottime{font-size:22px;font-weight:800;color:var(--waitBig);letter-spacing:-.03em;margin-right:2px}
   .leadmain{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.02em;margin-right:1px}
-  .leadmain.done{font-size:16px;font-weight:600;color:var(--goTx)}
+  /* 「남은 예약 없음」은 상태 설명이라 본문색. 초록은 옆의 방문 집계에만 쓴다 */
+  .leadmain.done{font-size:16px;font-weight:600;color:var(--text)}
   /* 인원 요약은 자리가 모자란 조각만 다음 줄로 내린다 */
   .leadsub{font-size:13px;font-weight:600;color:var(--dim);display:inline}
   .leadsub .pc{white-space:nowrap}
@@ -1800,6 +1801,19 @@ window.dispatchEvent(new Event('fb-ready'));
   document.getElementById('cancelPaste').addEventListener('click', closePaste);
   document.getElementById('addBtn').addEventListener('click', openAdd);
 
+  // ⋯ 메뉴는 바깥을 누르면 닫힌다.
+  // 그 탭은 닫는 데만 쓰고 넘기지 않는다 — 메뉴를 치우려다 옆 사람이 체크되면 안 된다.
+  // click 단계에서 처리해야 스크롤은 막히지 않는다.
+  document.addEventListener('click', function(e){
+    if (!openMenu) return;
+    var t = e.target;
+    if (t.closest && (t.closest('.menu') || t.closest('.more'))) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openMenu = null;
+    render();
+  }, true);
+
   /* ---------- 검색 ---------- */
   var qEl = document.getElementById('q');
   var qClear = document.getElementById('qClear');
@@ -2187,7 +2201,7 @@ window.dispatchEvent(new Event('fb-ready'));
       '<p class="about">익선취향 예약 명단을 관리하는 앱입니다.</p>'
       + '<p class="about">모든 변경사항은 <b>실시간으로 반영</b>되어 각자의 폰에서 바로 확인할 수 있습니다.</p>'
       + '<p class="about"><b>명단 복사</b>를 누르면 단톡방 양식 그대로 복사됩니다.</p>'
-      + '<p class="credit">익순이 v1.1<br>© 2026 Jumin Labs</p>');
+      + '<p class="credit">익순이 v1.2<br>© 2026 Jumin Labs</p>');
   });
 
   // 브라우저로 처음 들어온 사람에게 한 번 권한다
@@ -2240,14 +2254,7 @@ window.dispatchEvent(new Event('fb-ready'));
       return;
     }
     if (!state){ toast('명단이 없습니다'); return; }
-    fetchTag().then(function(tag){
-      if (tag && buildTag && tag !== buildTag && !typingNow()){
-        toast('새 버전을 불러옵니다');
-        setTimeout(function(){ window.location.reload(); }, 700);
-        return null;
-      }
-      return sync().then(function(){ toast('최신 명단입니다'); });
-    });
+    sync().then(function(){ toast('최신 명단입니다'); });
   });
 
   // 보고용 텍스트 — 체크 안 된 건 뒤에 아무것도 안 붙임
@@ -2315,14 +2322,28 @@ window.dispatchEvent(new Event('fb-ready'));
   }
 
   /* ---------- 자동 업데이트 ---------- */
-  // 파일이 새로 올라갔는지 확인하고, 아무 일도 하고 있지 않을 때만 조용히 새로 불러온다.
-  // 확인 시점은 두 군데뿐 — 앱으로 돌아왔을 때, 「새로고침」을 눌렀을 때.
-  // 직원에게 「껐다 켜세요」라고 알릴 필요가 없어진다.
+  // 파일이 새로 올라갔는지는 하루에 한 번, 날짜가 바뀌는 순간에만 확인한다.
+  // 영업 중에는 절대 화면이 새로 뜨지 않는다.
   var buildTag = null;          // 지금 화면이 만들어질 때의 파일 표식
   var lastTouchAt = Date.now(); // 마지막으로 화면을 만진 시각
-  ['pointerdown', 'keydown'].forEach(function(ev){
+  ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(function(ev){
     document.addEventListener(ev, function(){ lastTouchAt = Date.now(); }, true);
   });
+
+  // 서버가 표식을 오락가락 주면 새로고침이 반복될 수 있다. 1분에 한 번으로 묶는다.
+  var RELOAD_GAP = 60000;
+  function reloadedRecently(){
+    try {
+      var t = +sessionStorage.getItem('lastAutoReload') || 0;
+      return Date.now() - t < RELOAD_GAP;
+    } catch(e){ return false; }
+  }
+  function doReload(){
+    if (reloadedRecently()) return false;
+    try { sessionStorage.setItem('lastAutoReload', String(Date.now())); } catch(e){}
+    window.location.reload();
+    return true;
+  }
 
   function fetchTag(){
     if (!window.fetch) return Promise.resolve(null);
@@ -2334,12 +2355,11 @@ window.dispatchEvent(new Event('fb-ready'));
       .catch(function(){ return null; });
   }
 
-  // 새로 불러도 잃을 게 없는 상태인가.
-  // 앱으로 막 돌아온 순간(resume)은 아직 아무것도 안 한 시점이라 대기 시간을 따지지 않는다.
-  function safeToReload(resume){
+  // 새로 불러도 잃을 게 없는 상태인가
+  function safeToReload(){
     if (document.hidden || !online) return false;
     if (typingNow() || dirty || saving || openMenu) return false;
-    if (!resume && Date.now() - lastTouchAt < 20000) return false;   // 방금 만졌으면 기다린다
+    if (Date.now() - lastTouchAt < 20000) return false;   // 방금 만졌으면 기다린다
     var busy = ['pastePanel', 'addPanel', 'panelScrim', 'sheetScrim', 'scrim'].some(function(id){
       var el = document.getElementById(id);
       return el && !el.classList.contains('hide');
@@ -2350,13 +2370,13 @@ window.dispatchEvent(new Event('fb-ready'));
     return true;
   }
 
-  function checkUpdate(resume){
+  function checkUpdate(){
     return fetchTag().then(function(tag){
       if (!tag) return false;
       if (!buildTag){ buildTag = tag; return false; }
       if (tag === buildTag) return false;
-      if (!safeToReload(resume)) return true;    // 새 판은 있는데 지금은 때가 아니다
-      window.location.reload();
+      if (!safeToReload()) return true;          // 새 판은 있는데 지금은 때가 아니다
+      doReload();
       return true;
     });
   }
@@ -2370,7 +2390,6 @@ window.dispatchEvent(new Event('fb-ready'));
     // 백그라운드에 있는 동안 날짜가 넘어갔을 수 있다.
     // 먼저 확인하지 않으면 어제 명단을 「오늘」로 띄운 채 체크하게 된다.
     if (rolloverIfNeeded()) return;
-    setTimeout(function(){ checkUpdate(true); }, 400);   // 새 판이 올라왔는지도 확인
     if (!state) return;
     sync();          // 즉시 최신 상태 확인
     watchRemote();   // 백그라운드에서 끊겼을 수 있으니 실시간 수신도 다시 건다
@@ -2394,6 +2413,16 @@ window.dispatchEvent(new Event('fb-ready'));
     viewDate = b;
     collapsed = {}; touched = {};
     boot();
+    // 하루가 바뀌는 이 순간이 화면을 새로 띄우기에 가장 안전하다.
+    // 마침 누가 쓰고 있으면 미루고, 1분 간격으로 몇 번만 다시 본다.
+    var tries = 0;
+    (function attempt(){
+      setTimeout(function(){
+        checkUpdate().then(function(pending){
+          if (pending && ++tries < 5) attempt();   // 새 판은 있는데 때가 아니었다
+        });
+      }, tries === 0 ? 1500 : 60000);
+    })();
     return true;
   }
 
