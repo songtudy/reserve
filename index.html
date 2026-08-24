@@ -137,9 +137,12 @@
   }
   .tools button:active{background:var(--panel2)}
   .tools button.on{color:var(--waitTx);background:var(--panel2)}
-  /* 연결 끊김 표시는 날짜 옆(왼쪽 묶음)에 둔다.
-     오른쪽 묶음(진행도·검색)은 오른쪽 정렬이라 이게 나타나도 자리가 밀리지 않는다.
-     좁아지면 날짜가 «...» 로 줄어들 뿐이다. */
+  /* 개발용 주소에서만 뜨는 표시 */
+  .devtag{
+    flex:0 0 auto;padding:4px 8px;border-radius:8px;
+    background:var(--wait);color:var(--onWait);
+    font-size:12px;font-weight:800;letter-spacing:.04em;line-height:1.2;
+  }
   .offtag{
     display:none;align-items:center;flex:0 0 auto;
     padding:4px 9px;border-radius:8px;
@@ -203,6 +206,7 @@
 
   /* time group */
   .group{margin-top:10px}
+
   .ghead{
     position:sticky;top:var(--hh,84px);z-index:10;
     background:var(--ink);
@@ -697,6 +701,7 @@
       <div class="tools">
         <span class="dayprog num hide" id="dayProg"></span>
         <span class="offtag">연결 안 됨</span>
+        <span class="devtag hide" id="devTag">TEST</span>
         <button type="button" id="searchBtn" class="off" aria-label="이름 검색">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 L21 21"/>
@@ -837,13 +842,16 @@ const firebaseConfig = {
 };
 
 const db = getDatabase(initializeApp(firebaseConfig));
-const path = k => 'roster/' + String(k).replace('roster:', '');
+// 주소에 -dev 가 들어 있으면 개발용. 명단 저장 위치를 따로 써서 실제 명단을 건드리지 않는다.
+const DEV = /-dev(\/|$)/.test(location.pathname);
+const ROOT = DEV ? 'roster-dev' : 'roster';
+const path = k => ROOT + '/' + String(k).replace('roster:', '');
 
 window.__fb = {
   get: k => get(ref(db, path(k))).then(s => s.exists() ? s.val() : null),
   set: (k, v) => set(ref(db, path(k)), v),
-  remove: ds => remove(ref(db, 'roster/' + ds)),
-  list: () => get(ref(db, 'roster')).then(s => s.exists() ? Object.keys(s.val()) : []),
+  remove: ds => remove(ref(db, ROOT + '/' + ds)),
+  list: () => get(ref(db, ROOT)).then(s => s.exists() ? Object.keys(s.val()) : []),
   watch: (k, cb) => {
     const r = ref(db, path(k));
     const h = onValue(r, s => cb(s.exists() ? s.val() : null));
@@ -1121,6 +1129,72 @@ window.dispatchEvent(new Event('fb-ready'));
     return out.join('<span class="pcsep"> · </span>');
   }
 
+  // 상단 요약과 진행도만 다시 그린다 (목록은 건드리지 않는다)
+  function paintHead(){
+    paintDate();
+    var all = state ? state.items.slice().sort(sortItems) : [];
+    var gap = dayGap(viewDate);
+    var gs = [], gi = {};
+    all.forEach(function(it){
+      if (gi[it.time] === undefined){ gi[it.time] = gs.length; gs.push({ time: it.time, items: [] }); }
+      gs[gi[it.time]].items.push(it);
+    });
+    var now = nowMin(), nowTime = null;
+    if (gap === 0){
+      for (var i = 0; i < gs.length; i++){
+        if (!slotLive(gs[i].time, now)) continue;
+        if (gs[i].items.some(function(x){ return x.status === 'pending'; })){ nowTime = gs[i].time; break; }
+      }
+    }
+    var slotPend = [];
+    if (nowTime){
+      gs.forEach(function(g){
+        if (g.time === nowTime) slotPend = g.items.filter(function(x){ return x.status === 'pending'; });
+      });
+    }
+    var leadRow = document.querySelector('.lead');
+    var st = document.getElementById('slotTime');
+    var lb = document.querySelector('.slotlab');
+    var lm = document.getElementById('leadMain');
+    var ls = document.getElementById('leadSub');
+
+    if (slotPend.length){
+      st.textContent = nowTime;
+      lb.textContent = '예약';
+      lm.className = 'leadmain num';
+      lm.textContent = slotPend.length + '팀';
+      var byPax = {};
+      slotPend.forEach(function(x){ byPax[x.pax] = (byPax[x.pax] || 0) + 1; });
+      ls.className = 'leadsub num';
+      ls.innerHTML = Object.keys(byPax).map(Number).sort(function(a, b){ return a - b; })
+        .map(function(p){ return '<span class="pc">' + p + '인 ' + byPax[p] + '팀</span>'; })
+        .join('<span class="pcsep"> · </span>');
+    } else if (gap !== 0 && all.length){
+      st.textContent = ''; lb.textContent = '';
+      lm.className = 'leadmain num';
+      lm.textContent = all.length + '팀';
+      ls.className = 'leadsub num tally';
+      ls.innerHTML = dayTally(all);
+    } else {
+      st.textContent = ''; lb.textContent = '';
+      lm.className = 'leadmain num done';
+      lm.textContent = all.length ? '남은 예약 없음' : '';
+      ls.className = 'leadsub num tally';
+      ls.innerHTML = all.length ? dayTally(all) : '';
+    }
+    if (leadRow) leadRow.classList.toggle('hide', !st.textContent && !lm.textContent);
+
+    var doneN = 0, offN = 0;
+    all.forEach(function(it){
+      if (it.status === 'arrived') doneN++;
+      else if (it.status === 'cancelled') offN++;
+    });
+    var dp = document.getElementById('dayProg');
+    dp.textContent = (doneN + offN) + '/' + all.length;
+    dp.className = 'dayprog num' + (all.length ? '' : ' hide')
+      + (all.length && doneN + offN === all.length ? ' full' : '');
+  }
+
   function render(){
     paintDate();
     var list = document.getElementById('list');
@@ -1160,68 +1234,16 @@ window.dispatchEvent(new Event('fb-ready'));
       }
     }
 
-    // 헤더 — 검색과 무관하게 항상 전체 기준
+    paintHead();
     var gap = dayGap(viewDate);
-    var slotPend = [];
-    if (nowTime){
-      allGroups.forEach(function(g){
-        if (g.time === nowTime) slotPend = g.items.filter(function(x){ return x.status==='pending'; });
-      });
-    }
-    var leadRow = document.querySelector('.lead');
-    var st = document.getElementById('slotTime');
-    var lb = document.querySelector('.slotlab');
-    var lm = document.getElementById('leadMain');
-    var ls = document.getElementById('leadSub');
-
-    if (slotPend.length){
-      st.textContent = nowTime;
-      lb.textContent = '예약';
-      lm.className = 'leadmain num';
-      lm.textContent = slotPend.length + '팀';
-      var byPax = {};
-      slotPend.forEach(function(x){ byPax[x.pax] = (byPax[x.pax]||0) + 1; });
-      ls.className = 'leadsub num';
-      ls.innerHTML = Object.keys(byPax).map(Number).sort(function(a,b){ return a-b; })
-        .map(function(p){ return '<span class="pc">' + p + '인 ' + byPax[p] + '팀</span>'; })
-        .join('<span class="pcsep"> · </span>');
-    } else if (gap !== 0 && all.length){
-      // 어제/내일 — 시간대 강조 대신 하루 총 팀수
-      st.textContent = '';
-      lb.textContent = '';
-      lm.className = 'leadmain num';
-      lm.textContent = all.length + '팀';
-      ls.className = 'leadsub num tally';
-      ls.innerHTML = dayTally(all);
-    } else {
-      st.textContent = '';
-      lb.textContent = '';
-      lm.className = 'leadmain num done';
-      lm.textContent = all.length ? '남은 예약 없음' : '';
-      ls.className = 'leadsub num tally';
-      ls.innerHTML = all.length ? dayTally(all) : '';
-    }
-
-    if (leadRow) leadRow.classList.toggle('hide', !st.textContent && !lm.textContent);
 
     // 명단이 없으면 하단 메뉴와 검색은 할 일이 없다
-    var footEl = document.querySelector('.foot');
-    if (footEl) footEl.classList.toggle('hide', !all.length);
-    document.body.style.paddingBottom = all.length ? '' : '24px';
-    searchBtn.classList.toggle('off', !all.length);
-    if (!all.length && !searchbar.classList.contains('hide')) closeSearch(false);
-
-    // 날짜 / 하루 진행 (분모는 취소 포함 전체)
-    var doneN = 0, offN = 0;
-    all.forEach(function(it){
-      if (it.status === 'arrived') doneN++;
-      else if (it.status === 'cancelled') offN++;
-    });
-    paintDate();
-    var dp = document.getElementById('dayProg');
-    dp.textContent = (doneN + offN) + '/' + all.length;
-    dp.className = 'dayprog num' + (all.length ? '' : ' hide')
-      + (all.length && doneN + offN === all.length ? ' full' : '');
+    var allCount = all.length;
+    var footEl2 = document.querySelector('.foot');
+    if (footEl2) footEl2.classList.toggle('hide', !allCount);
+    document.body.style.paddingBottom = allCount ? '' : '24px';
+    searchBtn.classList.toggle('off', !allCount);
+    if (!allCount && !searchbar.classList.contains('hide')) closeSearch(false);
 
     // 날짜 표시 / 이동 버튼
     document.body.classList.toggle('offday', gap !== 0);
@@ -1256,6 +1278,7 @@ window.dispatchEvent(new Event('fb-ready'));
 
       var wrap = document.createElement('section');
       wrap.className = 'group' + (g.time === nowTime ? ' now' : (pend.length ? '' : ' done')) + (shut ? ' shut' : '');
+      wrap.setAttribute('data-time', g.time);
 
       var head = document.createElement('button');
       head.className = 'ghead';
@@ -1279,6 +1302,10 @@ window.dispatchEvent(new Event('fb-ready'));
         }
         setCollapsed(g.time, willShut, pend.length === 0);
         render();
+        if (!willShut){                       // 펼친 내용이 아래로 잘리면 그만큼 올려준다
+          var wrapNow = document.querySelector('.group[data-time="' + g.time + '"]');
+          scrollIntoRoom(wrapNow);
+        }
       });
       wrap.appendChild(head);
 
@@ -1298,15 +1325,13 @@ window.dispatchEvent(new Event('fb-ready'));
 
   // 행이 아래로 펼쳐질 때 화면 밖으로 밀려나면 그만큼 스크롤을 내려준다.
   // 하단 바에 가려 잘리는 걸 막는다.
-  function ensureVisible(id){
+  // 펼쳐진 내용이 아래로 잘리면 그만큼만 스크롤한다.
+  // 한 화면에 다 안 들어가면 위쪽을 헤더 밑에 맞춘다 —
+  // 시간대 제목은 sticky 라 더 내려도 화면에 계속 붙어 있다.
+  function scrollIntoRoom(el){
+    if (!el) return;
     requestAnimationFrame(function(){
-      var row = null;
-      var rows = document.querySelectorAll('.row');
-      for (var i = 0; i < rows.length; i++){
-        if (rows[i].getAttribute('data-id') === id){ row = rows[i]; break; }
-      }
-      if (!row) return;
-      var r = row.getBoundingClientRect();
+      var r = el.getBoundingClientRect();
       var hd = document.querySelector('header');
       var headBottom = hd ? hd.getBoundingClientRect().bottom : 0;
       var footTop = (footEl && !footEl.classList.contains('hide'))
@@ -1319,6 +1344,32 @@ window.dispatchEvent(new Event('fb-ready'));
       }
       if (move > 1) window.scrollBy({ top: move, behavior: 'smooth' });
     });
+  }
+
+  function ensureVisible(id){
+    var rows = document.querySelectorAll('.row');
+    for (var i = 0; i < rows.length; i++){
+      if (rows[i].getAttribute('data-id') === id){ scrollIntoRoom(rows[i]); return; }
+    }
+  }
+
+  var ICON_GO = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"'
+    + ' stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 L10 17.5 L19 7"/></svg>';
+  var ICON_OFF = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"'
+    + ' stroke-width="3.4" stroke-linecap="round"><path d="M7 7 L17 17M17 7 L7 17"/></svg>';
+  function statusTag(st){
+    return st === 'arrived' ? '<span class="tag arrived">방문</span>'
+         : st === 'cancelled' ? '<span class="tag cancelled">취소</span>' : '';
+  }
+
+  function tapMore(id){
+    if (editing === id){               // 수정 중이면 저장하지 않고 접는다
+      editing = null; openMenu = null; render();
+      return;
+    }
+    openMenu = (openMenu === id) ? null : id;
+    render();
+    if (openMenu) ensureVisible(id);
   }
 
   function rowEl(it){
@@ -1334,15 +1385,9 @@ window.dispatchEvent(new Event('fb-ready'));
 
     // 방문 체크는 왼쪽 체크 칸에서만 된다.
     // 행 전체가 버튼이면 목록을 훑다가 잘못 눌리는 일이 생긴다.
-    var ICON_GO = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"'
-      + ' stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 L10 17.5 L19 7"/></svg>';
-    var ICON_OFF = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"'
-      + ' stroke-width="3.4" stroke-linecap="round"><path d="M7 7 L17 17M17 7 L7 17"/></svg>';
     var mark = it.status === 'arrived' ? ICON_GO
              : it.status === 'cancelled' ? ICON_OFF : '';
-    var tag = it.status === 'arrived' ? '<span class="tag arrived">방문</span>'
-            : it.status === 'cancelled' ? '<span class="tag cancelled">취소</span>'
-            : '';
+    var tag = statusTag(it.status);
     var main = document.createElement('button');
     main.className = 'main';
     main.type = 'button';
@@ -1369,23 +1414,12 @@ window.dispatchEvent(new Event('fb-ready'));
     } else {
       nameEl.textContent = it.name;
     }
-    main.addEventListener('click', function(){ toggle(it.id); });
 
     var more = document.createElement('button');
     more.className = 'more';
     more.type = 'button';
     more.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">'
       + '<circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
-    more.addEventListener('click', function(e){
-      e.stopPropagation();
-      if (editing === it.id){          // 수정 중이면 저장하지 않고 접는다
-        editing = null; openMenu = null; render();
-        return;
-      }
-      openMenu = (openMenu === it.id) ? null : it.id;
-      render();
-      if (openMenu) ensureVisible(it.id);
-    });
 
     top.appendChild(main); top.appendChild(info); top.appendChild(more);
     body.appendChild(top);
@@ -1540,6 +1574,48 @@ window.dispatchEvent(new Event('fb-ready'));
     if (!it) return;
     setStatus(id, it.status === 'arrived' ? 'pending' : 'arrived');
   }
+  // 바뀐 행과 그 시간대 머리글만 손본다. 요소를 새로 만들지 않고 내용만 고친다.
+  // 실패하면 false 를 돌려주고 호출한 쪽이 통째로 다시 그린다.
+  function patchStatus(it){
+    var row = null, groups = document.querySelectorAll('.row');
+    for (var i = 0; i < groups.length; i++){
+      if (groups[i].getAttribute('data-id') === it.id){ row = groups[i]; break; }
+    }
+    if (!row) return false;
+
+    row.className = 'row ' + it.status;
+    var chk = row.querySelector('.check');
+    if (chk) chk.innerHTML = it.status === 'arrived' ? ICON_GO
+                           : it.status === 'cancelled' ? ICON_OFF : '';
+    var info = row.querySelector('.info');
+    var old = info.querySelector('.tag');
+    if (old) old.parentNode.removeChild(old);
+    var html = statusTag(it.status);
+    if (html){
+      var box = document.createElement('div');
+      box.innerHTML = html;
+      info.insertBefore(box.firstChild, info.querySelector('.pax'));
+    }
+
+    // 시간대 머리글 숫자
+    var wrap = row.closest('.group');
+    if (wrap && state){
+      var mine = state.items.filter(function(x){ return x.time === it.time; });
+      var came = mine.filter(function(x){ return x.status === 'arrived'; }).length;
+      var off  = mine.filter(function(x){ return x.status === 'cancelled'; }).length;
+      var pend = mine.length - came - off;
+      var meta = wrap.querySelector('.gmeta');
+      if (meta){
+        meta.innerHTML = '<b>' + (came + off) + '/' + mine.length + '</b>'
+          + '<span class="gbreak">방문 ' + came + (off ? ' · 취소 ' + off : '') + '</span>';
+      }
+      wrap.className = 'group' + (wrap.classList.contains('now') ? ' now' : (pend ? '' : ' done'));
+      wrap.setAttribute('data-time', it.time);
+    }
+    paintHead();
+    return true;
+  }
+
   function setStatus(id, st){
     var it = find(id);
     if (!it) return;
@@ -1547,9 +1623,9 @@ window.dispatchEvent(new Event('fb-ready'));
     it.ts = Date.now();
     touched[it.time] = Date.now();
     openMenu = null;
-    render();
+    if (!patchStatus(it)) render();     // 부분 갱신이 안 되면 통째로
     save();
-    // 접힘 유예가 끝나는 시점에 한 번 더 그려준다
+    // 접힘 유예가 끝나는 시점에 한 번 더 그려준다 (접는 연출은 render 가 맡는다)
     setTimeout(render, COLLAPSE_DELAY + 100);
     if (st === 'arrived') toast(it.name + ' 방문 체크');
   }
@@ -1857,6 +1933,60 @@ window.dispatchEvent(new Event('fb-ready'));
     render();
   }, true);
 
+  // 체크와 ⋯ 는 손을 뗄 때(pointerup) 직접 처리한다.
+  // click 에 맡기면 누른 뒤 화면이 다시 그려졌을 때 브라우저가 탭을 없던 일로 만든다.
+  // 대신 손가락이 밀렸으면(스크롤) 무시해서 잘못 눌리는 건 오히려 더 엄격하다.
+  var SLOP = 12, HOLD = 900;
+  var tapInfo = null, lastPointerAct = 0;
+  var listEl = document.getElementById('list');
+
+  listEl.addEventListener('pointerdown', function(e){
+    tapInfo = null;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var m = e.target.closest && e.target.closest('.main, .more');
+    if (!m) return;
+    var row = m.closest('.row');
+    if (!row) return;
+    tapInfo = {
+      id: row.getAttribute('data-id'),
+      kind: m.classList.contains('more') ? 'more' : 'main',
+      x: e.clientX, y: e.clientY, at: Date.now(), pid: e.pointerId
+    };
+  });
+
+  listEl.addEventListener('pointerup', function(e){
+    var t = tapInfo; tapInfo = null;
+    if (!t || e.pointerId !== t.pid) return;
+    if (Math.abs(e.clientX - t.x) > SLOP || Math.abs(e.clientY - t.y) > SLOP) return;  // 밀었으면 취소
+    if (Date.now() - t.at > HOLD) return;                                              // 오래 눌렀으면 취소
+    if (!find(t.id)) return;
+    // 다른 행의 메뉴가 열려 있으면 그것부터 닫는다
+    if (openMenu && openMenu !== t.id && document.querySelector('.menu')){
+      openMenu = null; render(); return;
+    }
+    lastPointerAct = Date.now();
+    if (t.kind === 'more') tapMore(t.id);
+    else toggle(t.id);
+  });
+
+  // 손가락이 아닌 경로(키보드 Enter, 보이스오버 등)는 여전히 click 으로 들어온다.
+  // 방금 손가락으로 처리한 건 건너뛰어 두 번 실행되지 않게 한다.
+  listEl.addEventListener('click', function(e){
+    if (Date.now() - lastPointerAct < 700) return;
+    var m = e.target.closest && e.target.closest('.main, .more');
+    if (!m) return;
+    var row = m.closest('.row');
+    if (!row) return;
+    var id = row.getAttribute('data-id');
+    if (!find(id)) return;
+    if (m.classList.contains('more')) tapMore(id);
+    else toggle(id);
+  });
+
+  ['pointercancel', 'pointerleave'].forEach(function(ev){
+    listEl.addEventListener(ev, function(){ tapInfo = null; });
+  });
+
   /* ---------- 검색 ---------- */
   var qEl = document.getElementById('q');
   var qClear = document.getElementById('qClear');
@@ -1977,6 +2107,12 @@ window.dispatchEvent(new Event('fb-ready'));
   window.addEventListener('resize', fitHeight);    // 안에서 footMode 까지 부른다
   window.addEventListener('orientationchange', function(){ setTimeout(fitHeight, 250); });
   if (window.visualViewport) window.visualViewport.addEventListener('resize', fitHeight);
+
+  // 개발용 폴더에서 열렸으면 표시해 둔다. 실제 앱과 헷갈리지 않게.
+  if (/-dev(\/|$)/.test(location.pathname)){
+    var dt = document.getElementById('devTag');
+    if (dt) dt.classList.remove('hide');
+  }
 
   /* ---------- 테마 ---------- */
   // 다크가 기본. 라이트를 고른 사람만 저장값이 남는다.
@@ -2251,7 +2387,7 @@ window.dispatchEvent(new Event('fb-ready'));
       '<p class="about">익선취향 예약 명단을 관리하는 앱입니다.</p>'
       + '<p class="about">모든 변경사항은 <b>실시간으로 반영</b>되어 각자의 폰에서 바로 확인할 수 있습니다.</p>'
       + '<p class="about"><b>명단 복사</b>를 누르면 단톡방 양식 그대로 복사됩니다.</p>'
-      + '<p class="credit">익순이 v1.2<br>© 2026 Jumin Labs</p>');
+      + '<p class="credit">익순이 v1.3<br>© 2026 Jumin Labs</p>');
   });
 
   // 브라우저로 처음 들어온 사람에게 한 번 권한다
