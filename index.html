@@ -1121,30 +1121,7 @@ window.dispatchEvent(new Event('fb-ready'));
     return out.join('<span class="pcsep"> · </span>');
   }
 
-  // 손가락이 화면에 닿아 있는 동안에는 목록을 다시 만들지 않는다.
-  // 누르는 도중에 버튼이 새 것으로 갈리면 그 탭이 무효가 된다 (아이폰에서 잘 생긴다).
-  var touching = false, renderPending = false, touchTimer = null;
-  function touchStart(){
-    touching = true;
-    clearTimeout(touchTimer);
-    touchTimer = setTimeout(touchEnd, 1000);   // 뗀 신호를 못 받는 경우 대비
-  }
-  function touchEnd(){
-    if (!touching) return;
-    touching = false;
-    clearTimeout(touchTimer);
-    if (renderPending){
-      renderPending = false;
-      setTimeout(render, 0);          // 클릭이 먼저 처리된 뒤에 그린다
-    }
-  }
-  document.addEventListener('pointerdown', touchStart, true);
-  ['pointerup', 'pointercancel'].forEach(function(ev){
-    document.addEventListener(ev, touchEnd, true);
-  });
-
   function render(){
-    if (touching){ renderPending = true; return; }   // 손 뗄 때까지 미룬다
     paintDate();
     var list = document.getElementById('list');
     var all = state ? state.items.slice().sort(sortItems) : [];
@@ -1316,7 +1293,7 @@ window.dispatchEvent(new Event('fb-ready'));
     var hd = document.querySelector('header');
     if (hd) document.documentElement.style.setProperty('--hh', hd.offsetHeight + 'px');
 
-    if (typeof fitHeight === 'function') requestAnimationFrame(fitHeight);
+    if (typeof footMode === 'function') requestAnimationFrame(footMode);
   }
 
   // 행이 아래로 펼쳐질 때 화면 밖으로 밀려나면 그만큼 스크롤을 내려준다.
@@ -1964,9 +1941,13 @@ window.dispatchEvent(new Event('fb-ready'));
 
   /* ---------- 하단 바 ---------- */
   var footEl = document.querySelector('.foot');
+  var footHidden = true;
   function footMode(){
     if (!footEl) return;
-    void document.body.offsetHeight;                 // 레이아웃을 다시 계산하게 만든다
+    var hidden = footEl.classList.contains('hide');
+    if (!hidden && footHidden) setBodyHeight();      // 하단 바가 처음 나타날 때만 높이 재측정
+    footHidden = hidden;
+    if (hidden) return;
     var scrollable = document.documentElement.scrollHeight > viewportH() + 1;
     footEl.classList.toggle('flow', !scrollable);
   }
@@ -1983,9 +1964,12 @@ window.dispatchEvent(new Event('fb-ready'));
       vv ? Math.round(vv.height + vv.offsetTop) : 0
     );
   }
-  function fitHeight(){
+  function setBodyHeight(){
     var h = viewportH();
     if (h > 0) document.body.style.minHeight = h + 'px';
+  }
+  function fitHeight(){
+    setBodyHeight();
     footMode();
   }
   fitHeight();
@@ -2392,8 +2376,9 @@ window.dispatchEvent(new Event('fb-ready'));
   // 영업 중에는 절대 화면이 새로 뜨지 않는다.
   var buildTag = null;          // 지금 화면이 만들어질 때의 파일 표식
   var lastTouchAt = Date.now(); // 마지막으로 화면을 만진 시각
-  ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(function(ev){
-    document.addEventListener(ev, function(){ lastTouchAt = Date.now(); }, true);
+  ['pointerdown', 'keydown'].forEach(function(ev){
+    document.addEventListener(ev, function(){ lastTouchAt = Date.now(); },
+      { capture: true, passive: true });
   });
 
   // 서버가 표식을 오락가락 주면 새로고침이 반복될 수 있다. 1분에 한 번으로 묶는다.
