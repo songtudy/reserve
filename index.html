@@ -1050,12 +1050,15 @@ window.dispatchEvent(new Event('fb-ready'));
   function flush(){
     if (saving || !state) return;
     saving = true; dirty = false;
+    var before = JSON.stringify(state);
     loadRemote().then(function(remote){
       var merged = merge(remote, state);
       state = merged;
       return writeRemote(merged);
     }).then(function(){
-      saving = false; render();
+      saving = false;
+      // 저장 결과가 화면과 같으면 다시 그리지 않는다
+      if (JSON.stringify(state) !== before) render();
       if (dirty) flush();
     }).catch(function(){
       saving = false;
@@ -1289,8 +1292,34 @@ window.dispatchEvent(new Event('fb-ready'));
     if (typeof fitHeight === 'function') requestAnimationFrame(fitHeight);
   }
 
+  // 행이 아래로 펼쳐질 때 화면 밖으로 밀려나면 그만큼 스크롤을 내려준다.
+  // 하단 바에 가려 잘리는 걸 막는다.
+  function ensureVisible(id){
+    requestAnimationFrame(function(){
+      var row = null;
+      var rows = document.querySelectorAll('.row');
+      for (var i = 0; i < rows.length; i++){
+        if (rows[i].getAttribute('data-id') === id){ row = rows[i]; break; }
+      }
+      if (!row) return;
+      var r = row.getBoundingClientRect();
+      var hd = document.querySelector('header');
+      var headBottom = hd ? hd.getBoundingClientRect().bottom : 0;
+      var footTop = (footEl && !footEl.classList.contains('hide'))
+        ? footEl.getBoundingClientRect().top : window.innerHeight;
+      var move;
+      if (r.height > footTop - headBottom - 16){
+        move = r.top - headBottom - 8;          // 한 화면에 다 안 들어가면 위를 맞춘다
+      } else {
+        move = r.bottom - (footTop - 10);       // 아래가 잘리는 만큼만
+      }
+      if (move > 1) window.scrollBy({ top: move, behavior: 'smooth' });
+    });
+  }
+
   function rowEl(it){
     var row = document.createElement('div');
+    row.setAttribute('data-id', it.id);
     row.className = 'row ' + it.status;
 
     var body = document.createElement('div');
@@ -1345,8 +1374,13 @@ window.dispatchEvent(new Event('fb-ready'));
       + '<circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
     more.addEventListener('click', function(e){
       e.stopPropagation();
+      if (editing === it.id){          // 수정 중이면 저장하지 않고 접는다
+        editing = null; openMenu = null; render();
+        return;
+      }
       openMenu = (openMenu === it.id) ? null : it.id;
       render();
+      if (openMenu) ensureVisible(it.id);
     });
 
     top.appendChild(main); top.appendChild(info); top.appendChild(more);
@@ -1423,6 +1457,7 @@ window.dispatchEvent(new Event('fb-ready'));
       ed.addEventListener('click', function(e){
         e.stopPropagation();
         editing = it.id; openMenu = null; render();
+        ensureVisible(it.id);
       });
       menu.appendChild(ed);
       var del = document.createElement('button');
@@ -2427,9 +2462,14 @@ window.dispatchEvent(new Event('fb-ready'));
   }
 
   // 시간대 자동 전환 + 날짜 넘어감 확인
+  var lastPaint = '';
   setInterval(function(){
-    if (editing) return;
+    if (editing || openMenu) return;
     if (rolloverIfNeeded()) return;
+    // 화면에 나올 내용이 그대로면 다시 그리지 않는다 (시간대 표시는 분 단위라 분까지 본다)
+    var sig = JSON.stringify(state) + '|' + viewDate + '|' + nowMin();
+    if (sig === lastPaint) return;
+    lastPaint = sig;
     render();
   }, 5000);
 
