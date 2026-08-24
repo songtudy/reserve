@@ -262,6 +262,10 @@
     transition:.15s;
   }
   .check svg{display:block}
+  /* 누르는 요소에는 직접 지정한다. body 에만 걸면 아이폰에서 두 번 탭 판정이 남는다 */
+  .main, .more, .ghead, .foot button, .menu button, .tools button, .nav button{
+    touch-action:manipulation;
+  }
   /* stretch 로 두어야 이름이 칸 폭에 맞춰 «...» 로 줄어든다.
      flex-start 면 글자 길이만큼 늘어나 인원칸이 화면 밖으로 밀려난다 */
   .who{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch}
@@ -1129,7 +1133,10 @@ window.dispatchEvent(new Event('fb-ready'));
     if (!touching) return;
     touching = false;
     clearTimeout(touchTimer);
-    if (renderPending){ renderPending = false; render(); }
+    if (renderPending){
+      renderPending = false;
+      setTimeout(render, 0);          // 클릭이 먼저 처리된 뒤에 그린다
+    }
   }
   document.addEventListener('pointerdown', touchStart, true);
   ['pointerup', 'pointercancel'].forEach(function(ev){
@@ -1863,6 +1870,10 @@ window.dispatchEvent(new Event('fb-ready'));
     if (!openMenu) return;
     var t = e.target;
     if (t.closest && (t.closest('.menu') || t.closest('.more'))) return;
+    if (!document.querySelector('.menu')){   // 화면에 없는 메뉴 때문에 탭을 버리지 않는다
+      openMenu = null;
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     openMenu = null;
