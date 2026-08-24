@@ -1117,7 +1117,27 @@ window.dispatchEvent(new Event('fb-ready'));
     return out.join('<span class="pcsep"> · </span>');
   }
 
+  // 손가락이 화면에 닿아 있는 동안에는 목록을 다시 만들지 않는다.
+  // 누르는 도중에 버튼이 새 것으로 갈리면 그 탭이 무효가 된다 (아이폰에서 잘 생긴다).
+  var touching = false, renderPending = false, touchTimer = null;
+  function touchStart(){
+    touching = true;
+    clearTimeout(touchTimer);
+    touchTimer = setTimeout(touchEnd, 1000);   // 뗀 신호를 못 받는 경우 대비
+  }
+  function touchEnd(){
+    if (!touching) return;
+    touching = false;
+    clearTimeout(touchTimer);
+    if (renderPending){ renderPending = false; render(); }
+  }
+  document.addEventListener('pointerdown', touchStart, true);
+  ['pointerup', 'pointercancel'].forEach(function(ev){
+    document.addEventListener(ev, touchEnd, true);
+  });
+
   function render(){
+    if (touching){ renderPending = true; return; }   // 손 뗄 때까지 미룬다
     paintDate();
     var list = document.getElementById('list');
     var all = state ? state.items.slice().sort(sortItems) : [];
