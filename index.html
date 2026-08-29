@@ -1470,27 +1470,29 @@ window.dispatchEvent(new Event('fb-ready'));
     document.body.classList.toggle('paste-open', !panel.classList.contains('hide'));
   }
 
-  // 명단은 이제 .wrap 안에서만 스크롤된다. 대상이 스크롤러 밖으로 벗어나면
-  // .wrap 안에서만 최소한으로 스크롤해 보이게 한다. (상·하단 바는 스크롤러 밖이라
-  // 옛날처럼 헤더 높이·하단 바 높이를 손으로 뺄 필요가 없다.)
-  function scrollIntoRoom(el){
+  // 명단은 .wrap 안에서만 스크롤된다. 대상이 스크롤러 밖으로 벗어나 있으면 최소한으로
+  // 스크롤해 보이게 한다. (상·하단 바는 스크롤러 밖이라 높이를 손으로 뺄 필요가 없다.)
+  // 기본은 동기(즉시) — render() 직후 같은 tick 에 부르면 브라우저가 한 번만 그려
+  // 중간에 엉뚱한 스크롤 위치가 프레임에 안 보인다.
+  // smooth=true 는 사용자가 ⋯·수정을 눌러 가려진 행을 여는 경우 — 부드럽게 미끄러진다
+  // (이땐 키보드 애니메이션과 안 겹친다).
+  function roomScroll(el, smooth){
     if (!el || !wrapEl) return;
-    requestAnimationFrame(function(){
-      var er = el.getBoundingClientRect();
-      var wr = wrapEl.getBoundingClientRect();
-      // .ghead 는 sticky(top:0)라 스크롤러 위쪽 한 줄을 늘 덮는다. 그만큼 여유를 둔다
-      var group = el.closest && el.closest('.group');
-      var gh = group && group.querySelector('.ghead');
-      var isGroup = el.classList && el.classList.contains('group');
-      var pad = (gh && !isGroup ? gh.offsetHeight : 0);
-      var topEdge = wr.top + pad + 8;
-      var bottomEdge = wr.bottom - 10;
-      var move = 0;
-      if (er.height > bottomEdge - topEdge || er.top < topEdge) move = er.top - topEdge;
-      else if (er.bottom > bottomEdge) move = er.bottom - bottomEdge;
-      // 즉시 이동한다. 키보드 오르내릴 때 부드러운 애니메이션이 겹치면 튕겨 보인다.
-      if (Math.abs(move) > 1) wrapEl.scrollTop += move;
-    });
+    var er = el.getBoundingClientRect();
+    var wr = wrapEl.getBoundingClientRect();
+    // .ghead 는 sticky(top:0)라 스크롤러 위쪽 한 줄을 늘 덮는다. 그만큼 여유를 둔다
+    var group = el.closest && el.closest('.group');
+    var gh = group && group.querySelector('.ghead');
+    var isGroup = el.classList && el.classList.contains('group');
+    var pad = (gh && !isGroup ? gh.offsetHeight : 0);
+    var topEdge = wr.top + pad + 8;
+    var bottomEdge = wr.bottom - 10;
+    var move = 0;
+    if (er.height > bottomEdge - topEdge || er.top < topEdge) move = er.top - topEdge;
+    else if (er.bottom > bottomEdge) move = er.bottom - bottomEdge;
+    if (Math.abs(move) <= 1) return;
+    if (smooth && wrapEl.scrollTo) wrapEl.scrollTo({ top: wrapEl.scrollTop + move, behavior: 'smooth' });
+    else wrapEl.scrollTop += move;
   }
 
   function rowForId(id){
@@ -1515,32 +1517,37 @@ window.dispatchEvent(new Event('fb-ready'));
     });
   }
 
+  // ⋯·수정을 눌러 가려져 있던 행을 열 때 — 부드럽게 스크롤해 보여준다.
   function ensureVisible(id){
-    scrollIntoRoom(rowForId(id));
+    roomScroll(rowForId(id), true);
   }
 
-  // 저장·취소로 수정 폼이 닫힌 뒤(키보드가 완전히 내려간 시점) 스크롤을 한 번 맞춘다.
-  // 폼이 접히며 .wrap 이 줄어 그 행(과 아래)이 하단 바에 가릴 수 있어서. 딱 한 번만 —
-  // applyViewport 의 '키보드 닫힘' 전환에서 호출한다(고정 타이머 X → 레이스 없음).
-  var pendingCloseFixId = null;
-  function fixScrollAfterEditClose(id){
-    if (!wrapEl) return;
-    var maxST = wrapEl.scrollHeight - wrapEl.clientHeight;
-    if (wrapEl.scrollTop > maxST){ wrapEl.scrollTop = Math.max(0, maxST); return; }
-    // 편집한 행이 명단 끝에서 한 화면 안이면(= 하단 행) 마지막 행이 바 위로 오게,
-    // 아니면(= 중간) 편집한 행만 화면 안으로.
-    if (maxST > 0 && maxST - wrapEl.scrollTop < wrapEl.clientHeight){
-      var rows = wrapEl.querySelectorAll('.row');
-      if (rows.length) scrollIntoRoom(rows[rows.length - 1]);
-    } else {
-      var r = rowForId(id);
-      if (r) scrollIntoRoom(r);
+  // 수정 폼이 닫힌 뒤 스크롤을 딱 한 번 맞춘다. 호출한 쪽이 이미 알맞은 시점까지 미뤄
+  // 놓으므로(rAF 또는 키보드 완전히 내려간 뒤) 여기선 바로 옮긴다.
+  //  - reveal=true  (시간이 바뀌어 다른 자리로 이동): 무조건 그 행을 화면에 보여준다.
+  //  - reveal=false (제자리 수정): 폼이 접히며 .wrap 이 줄어 그 행(과 아래)이 하단 바에
+  //    가릴 수 있어, 명단 끝 근처면 마지막 행을 바 위로 올리고 아니면 그 행을 맞춘다.
+  var pendingClose = null;
+  function scrollAfterClose(o){
+    if (!wrapEl || !o) return;
+    var el = rowForId(o.id);
+    if (!o.reveal){
+      var maxST = wrapEl.scrollHeight - wrapEl.clientHeight;
+      if (maxST > 0 && maxST - wrapEl.scrollTop < wrapEl.clientHeight){
+        var rows = wrapEl.querySelectorAll('.row');
+        if (rows.length) el = rows[rows.length - 1];
+      }
     }
+    if (el) roomScroll(el);
   }
-  // 폼을 닫는 모든 경로에서 호출: 키보드가 올라와 있으면 닫힐 때까지 미뤘다가, 아니면 바로.
-  function afterEditClose(id){
-    if (keyboardOpen) pendingCloseFixId = id;
-    else requestAnimationFrame(function(){ fixScrollAfterEditClose(id); });
+  // 폼을 닫는 모든 경로에서 호출: 키보드가 올라와 있으면 완전히 내려앉은 뒤로 미룬다
+  // (applyViewport 가 --kb 0 을 보는 시점), 아니면 바로.
+  function afterEditClose(id, reveal){
+    var o = { id: id, reveal: !!reveal };
+    if (!keyboardOpen){ requestAnimationFrame(function(){ scrollAfterClose(o); }); return; }
+    pendingClose = o;
+    // --kb 0 시점을 놓쳤을 때의 백스톱 (그때는 이미 실행돼 pendingClose 가 비어 no-op)
+    setTimeout(function(){ if (pendingClose === o){ pendingClose = null; scrollAfterClose(o); } }, 700);
   }
 
   // 수정 폼을 닫으며 다시 그릴 때, 그 행이 화면에서 제자리에 있도록 스크롤을 보정한다.
@@ -1601,7 +1608,7 @@ window.dispatchEvent(new Event('fb-ready'));
         closeSearch(false);
         backDone();
       }
-      pendingCloseFixId = null;   // 이전 폼 닫힘 보정이 남아 새 편집을 튀게 하지 않도록
+      pendingClose = null;   // 이전 폼 닫힘 보정이 남아 새 편집을 튀게 하지 않도록
       editing = id; openMenu = null; render();
       neutralFocusEdit(id);
       ensureVisible(id);
@@ -1785,6 +1792,13 @@ window.dispatchEvent(new Event('fb-ready'));
     return id;
   }
 
+  // 명단 맨 뒤로 보낼 때 쓸 다음 순번
+  function nextSeq(){
+    var m = 0;
+    state.items.forEach(function(x){ if ((x.seq || 0) > m) m = x.seq || 0; });
+    return m + 1;
+  }
+
   function applyEdit(id, timeV, nameV, paxV, memoV){
     var it = find(id);
     if (!it) return;
@@ -1805,11 +1819,7 @@ window.dispatchEvent(new Event('fb-ready'));
 
     // 시간이 바뀌면 옮겨간 시간대의 맨 뒤로
     var timeMoved = time !== it.time;
-    if (timeMoved){
-      var maxSeq = 0;
-      state.items.forEach(function(x){ if ((x.seq||0) > maxSeq) maxSeq = x.seq||0; });
-      it.seq = maxSeq + 1;
-    }
+    if (timeMoved) it.seq = nextSeq();
 
     var memoOnly = (time === it.time && name === it.name && pax === it.pax);
     logAdd(memoOnly ? '메모' : '수정',
@@ -1822,14 +1832,18 @@ window.dispatchEvent(new Event('fb-ready'));
     touched[originalTime] = Date.now();
     touched[time] = Date.now();
     armSlotCollapse(originalTime);
-    if (time !== originalTime) armSlotCollapse(time);
+    if (timeMoved) armSlotCollapse(time);
     state.items.sort(sortItems);
     var anchor = editing;
     editing = null;
-    if (timeMoved) render();                 // 시간이 바뀌면 자리가 달라지니 그냥 다시 그린다
-    else renderAnchored(anchor);             // 제자리 수정이면 행이 안 튀게 보정
-    if (timeMoved) ensureVisible(it.id);
-    afterEditClose(it.id);                   // 키보드 내려간 뒤 한 번 재정렬 (하단 행 가림 방지)
+    if (timeMoved){
+      render();                              // 자리가 달라지니 그냥 다시 그린다
+      roomScroll(rowForId(it.id));           // 같은 프레임에 바로 그 행으로 (엉뚱한 위치가 안 보이게)
+      if (keyboardOpen) afterEditClose(it.id, true);   // 키보드 내려간 뒤 레이아웃 최종 안정되면 한 번 더
+    } else {
+      renderAnchored(anchor);                // 제자리 수정이면 행이 안 튀게 보정
+      afterEditClose(it.id);                 // 폼 접히며 하단이 바에 가리는 것 보정
+    }
     if (it.id === oldId) writeItem(oldId, { memo: it.memo, ts: it.ts });   // 메모만 바뀜 (id 유지)
     else { delItem(oldId); putItem(it); }                                  // 시각·이름·인원 바뀜 = 다른 노드
     toast('수정됨');
@@ -2209,7 +2223,7 @@ window.dispatchEvent(new Event('fb-ready'));
     setCollapsed(time, willShut, tallyStatus(mine).pend === 0);
     render();
     if (editing) writeEditDraft(rowForId(editing), editDraft);
-    if (!willShut) scrollIntoRoom(slotEl(time));
+    if (!willShut) roomScroll(slotEl(time), true);   // 펼친 시간대가 길어 가려지면 부드럽게 맞춰 보여준다
   }
 
   // 「지금 시간대」가 어디인지 다시 계산해서 시간대 색과 왼쪽 막대를 맞춘다
@@ -2455,11 +2469,9 @@ window.dispatchEvent(new Event('fb-ready'));
     var pax = parseInt(aPax.value, 10);
     var memo = aMemo.value.replace(/\s+/g,' ').trim();
     if (!state) state = { date: viewDate, items: [] };
-    var maxSeq = 0;
-    state.items.forEach(function(x){ if ((x.seq||0) > maxSeq) maxSeq = x.seq||0; });
     var item = {
       id: uniqueId(time, name, pax), time: time, name: name, pax: pax,
-      memo: memo, status: 'pending', ts: Date.now(), seq: maxSeq + 1
+      memo: memo, status: 'pending', ts: Date.now(), seq: nextSeq()
     };
     state.items.push(item);
     state.items.sort(sortItems);
@@ -2507,14 +2519,14 @@ window.dispatchEvent(new Event('fb-ready'));
       keyboardOpen = open;
       document.body.classList.toggle('keyboard-open', open);
       if (addPanel) addPanel.classList.toggle('kb', open);
-      // 키보드가 완전히 내려간 뒤(= 이 전환 시점) 스크롤을 딱 한 번 맞춘다.
-      if (!open){
-        if (editing) ensureVisible(editing);                  // 폼이 아직 열려 있음
-        else if (pendingCloseFixId != null){                  // 저장/취소로 폼이 닫혔음
-          var pid = pendingCloseFixId; pendingCloseFixId = null;
-          requestAnimationFrame(function(){ fixScrollAfterEditClose(pid); });
-        }
-      }
+      // 폼이 아직 열려 있으면 키보드 내려간 직후 한 번 화면에 맞춘다 (즉시 — 키보드 꼬리와 안 겹치게).
+      if (!open && editing) roomScroll(rowForId(editing));
+    }
+    // 저장/취소로 폼이 닫혔으면, 키보드가 완전히 내려앉아(--kb 0) 레이아웃이 멈춘 뒤
+    // 딱 한 번 스크롤한다. 전환 시점(KB_MIN)은 아직 키보드가 90px 남아 흔들린다.
+    if (!open && kb === 0 && pendingClose){
+      var pc = pendingClose; pendingClose = null;
+      requestAnimationFrame(function(){ scrollAfterClose(pc); });
     }
     // 키보드가 없을 때의 안정된 높이를 기준으로 유지 (아이폰이 늦게 늘려줘도 따라감)
     if (!open) kbBaseH = Math.max(kbBaseH, h);
