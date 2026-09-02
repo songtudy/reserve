@@ -568,17 +568,19 @@ window.setThemeChrome = function(t){
     width:100%;max-width:520px;
     background:var(--panel);border:1px solid var(--line);border-bottom:0;
     border-radius:18px 18px 0 0;
-    padding:20px 18px calc(env(safe-area-inset-bottom) + 16px);
+    padding:20px 0 calc(env(safe-area-inset-bottom) + 16px);
     max-height:82vh;overflow:hidden;
     display:flex;flex-direction:column;
   }
-  .sheet h3{flex:0 0 auto;margin:0 0 8px;font-size:17px;font-weight:800;letter-spacing:-.02em}
+  /* 좌우 여백은 .sheet 가 아니라 안쪽 요소에 준다 — #sheetBody 가 시트 가장자리까지
+     닿아, 스크롤바가 (내용 사이가 아니라) 시트 모서리에 붙는다. 내용은 좌우 대칭 18px. */
+  .sheet h3{flex:0 0 auto;margin:0 18px 8px;font-size:17px;font-weight:800;letter-spacing:-.02em}
   #sheetBody{
-    flex:1 1 auto;min-height:0;min-width:0;
+    flex:1 1 auto;min-height:0;min-width:0;padding:0 18px;
     overflow-y:auto;overflow-x:hidden;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
-  .sheetBtns{flex:0 0 auto;display:flex;gap:8px}
+  .sheetBtns{flex:0 0 auto;display:flex;gap:8px;margin:0 18px}
   .sheetBtns .sheetClose{flex:1}
   .sheetNever{
     flex:1;padding:13px 0;border-radius:11px;
@@ -591,7 +593,7 @@ window.setThemeChrome = function(t){
   .qa:last-child{border-bottom:0}
   .qa .q{
     display:flex;align-items:center;gap:8px;width:100%;
-    padding:14px 2px;background:none;border:0;cursor:pointer;
+    padding:14px 0;background:none;border:0;cursor:pointer;
     font-family:inherit;font-size:14px;font-weight:700;color:var(--text);
     text-align:left;letter-spacing:-.02em;line-height:1.35;
   }
@@ -599,7 +601,7 @@ window.setThemeChrome = function(t){
   .qa.open .q{color:var(--waitTx)}
   .qa.open .qchev{transform:rotate(90deg);color:var(--waitTx)}
   .qa .a{
-    display:none;padding:0 2px 15px;
+    display:none;padding:0 0 15px;
     font-size:13px;line-height:1.7;color:var(--dim);white-space:pre-line;
   }
   .qa.open .a{display:block}
@@ -633,8 +635,7 @@ window.setThemeChrome = function(t){
     color:var(--text);line-height:0;vertical-align:middle;
   }
   .key svg{display:block}
-  .sheetNote{font-size:13px;line-height:1.6;color:var(--goTx);margin:0 0 14px;white-space:pre-line}
-  .sheetNote.plain{color:var(--dim)}
+  .sheetNote{font-size:13px;line-height:1.6;color:var(--dim);margin:-4px 0 14px}
   /* 변경 내역 */
   .lgrow{
     display:flex;align-items:baseline;gap:10px;padding:9px 0;
@@ -647,7 +648,7 @@ window.setThemeChrome = function(t){
   .lgk.off{color:var(--warn)}
   .lgs{flex:1;min-width:0;color:var(--dim);font-size:13px;
        overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .lgempty{font-size:14px;color:var(--dim);padding:6px 0 14px}
+  .sheetMsg{font-size:14px;color:var(--dim);padding:6px 0 14px}
 
   /* 「지난 명단」 시트 — 목록은 「최근 변경 내역」(.lgrow) 처럼 한 줄(시각·요약·›), 행을 누르면 상세.
      요약 배색·굵기는 상단 「방문 n · 취소 n」(.leadsub) 과 맞춘다. */
@@ -2496,7 +2497,7 @@ window.dispatchEvent(new Event('fb-ready'));
   });
 
   function logHtml(rows){
-    if (!rows.length) return '<p class="lgempty">변경 내역이 없습니다</p>';
+    if (!rows.length) return '<p class="sheetMsg">변경 내역이 없습니다</p>';
     return rows.map(function(r){
       var cls = r.k === '방문' ? ' go'
               : (r.k === '취소' || r.k === '자동 취소' || r.k === '삭제' || r.k === '명단 초기화') ? ' off' : '';
@@ -2860,15 +2861,21 @@ window.dispatchEvent(new Event('fb-ready'));
 
   function applyViewport(){
     var h = visibleViewportH();
-    // 키보드가 가리는 높이 → 바텀시트(예약 추가) 올림·토스트 위치 등에 쓴다
+    // 키보드가 가리는 원(raw) 높이 — 아래 pendingClose(키보드 다 내려감) 판정에 쓴다
     var kb = Math.max(0, Math.round((window.innerHeight || 0) - h));
-    document.documentElement.style.setProperty('--kb', kb + 'px');
 
-    // 키보드 열림은 visualViewport 높이 감소로만 판단한다. 입력칸 포커스로 판단하면
-    // 저장 시 폼(입력칸)이 DOM 에서 사라지는 순간 키보드 애니메이션 중인데도 "닫힘"으로
-    // 오판해 레이아웃을 두 번 바꾼다(내려갔다 다시 올라감). 홈화면 PWA 는 키보드 말고는
-    // 뷰포트가 안 줄어든다.
-    var open = (kbBaseH - h) > KB_MIN;
+    // 키보드 열림 = visualViewport 높이가 KB_MIN 이상 줄어든 상태.
+    //  · 새로 "열림"이 되려면 입력칸이 실제로 포커스돼 있어야 한다 — 백그라운드에서
+    //    복귀할 때 iOS 가 잠깐 낮은 높이를 보고해도(전환 애니메이션) 하단 바가
+    //    사라지지 않게. (2주에 두 번 "복귀 후 하단 바 없음" 신고 → 이게 원인)
+    //  · 이미 열려 있었으면 높이 감소만으로 유지 — 저장 시 입력칸이 DOM 에서
+    //    사라져도 키보드 내려가는 애니메이션 동안은 "열림"을 지켜, 레이아웃이
+    //    두 번 튀지 않게 한다.
+    var shrunk = (kbBaseH - h) > KB_MIN;
+    var open = shrunk && (keyboardOpen || textKeyboardTarget(document.activeElement));
+    // 바텀시트 올림·토스트 위치용 — 실제 키보드일 때만. 복귀 시 iOS 의 잘못된
+    // 낮은 높이가 .wrap 아래를 밀지 않게 (하단 바는 위 open 가드가 지킨다).
+    document.documentElement.style.setProperty('--kb', (open ? kb : 0) + 'px');
     if (open !== keyboardOpen){
       keyboardOpen = open;
       document.body.classList.toggle('keyboard-open', open);
@@ -3413,39 +3420,25 @@ window.dispatchEvent(new Event('fb-ready'));
   sheetScrim.addEventListener('click', function(e){ if (e.target === sheetScrim) closeSheet(); });
 
   var FAQ = [
-    ['명단은 어떻게 등록하나요?',
-      '단톡방 명단을 복사해 <em>명단 붙여넣기</em>에 넣고 <em>명단 등록</em>을 누릅니다.\n'
-      + '「14:00 임동현 2명」 형식이면 됩니다.'],
-    ['예약은 어떻게 수정하나요?',
-      '이름 오른쪽 ⋯ 에서 <em>방문·취소·수정·삭제</em>합니다.\n'
-      + '시간을 바꾸면 그 시간대로 자동으로 옮겨갑니다.'],
-    ['메모는 어떻게 남기나요?',
-      '이름 오른쪽 ⋯ → <em>수정</em>의 메모 칸에 적습니다.\n'
-      + '이름 아래에 보이고, 명단 복사에는 빠집니다.'],
-    ['시간대는 언제 접히나요?',
-      '남은 예약이 없으면 5초 뒤 자동으로 접힙니다.\n'
-      + '체크를 풀면 다시 펼쳐집니다. 직접 접거나 편 것은 유지됩니다.'],
-    ['맨 위 시간대는 언제 넘어가나요?',
-      '그 시간대를 모두 체크하면 바로 넘어갑니다.\n'
-      + '남은 예약이 있으면 정각 예약은 11분 뒤, 그 외엔 예약 시각에 넘어갑니다.'],
     ['손님이 오지 않으면?',
-      '예약 시각 15분 뒤까지 체크가 없으면 자동으로 취소됩니다.\n'
+      '예약 시각 15분 뒤까지 방문 체크가 없으면 자동으로 취소됩니다.\n'
       + '늦게 와도 체크하면 방문으로 바뀝니다.'],
+    ['상단 시간은 언제 바뀌나요?',
+      '정각 예약은 11분 뒤, 그 외 예약은 예약 시각이 되면 다음 시간대로 넘어갑니다.\n'
+      + '또는 해당 시간대 예약을 모두 처리하면 바로 넘어갑니다.'],
+    ['시간대는 왜 자동으로 접히나요?',
+      '남은 예약이 없으면 5초 뒤 자동으로 접힙니다.'],
+    ['메모는 어떻게 쓰나요?',
+      '예약 <em>수정</em>에서 입력할 수 있으며 이름 아래에 표시됩니다.\n'
+      + '메모는 명단 복사에는 포함되지 않습니다.'],
     ['연결이 끊기면?',
-      '화면 위에 <em>연결 안 됨</em>이 뜹니다.\n'
-      + '그동안 바꾼 내용은 기기에 저장됐다가 연결되면 자동으로 올라갑니다.'],
-    ['「새 버전이 나왔어요」가 뜨면?',
-      '아래 <em>업데이트</em>를 누르면 최신 버전으로 새로 열립니다.\n'
-      + '급하지 않으면 나중에 눌러도 됩니다.'],
-    ['누가 바꿨는지 볼 수 있나요?',
-      '왼쪽 위 메뉴 → <em>최근 변경 내역</em>에서 오늘 바뀐 내용(최근 10건)을 봅니다.'],
-    ['명단이 잘못되거나 사라지면?',
-      '왼쪽 위 메뉴 → <em>지난 명단</em>에서 시점을 눌러 확인하고 <em>명단 복사</em> →\n'
-      + '<em>명단 붙여넣기</em>에 넣어 다시 등록합니다.\n'
-      + '(오늘 명단은 낮 12:20~저녁 7:20 매시간 자동 저장됩니다.)'],
-    ['날짜는 언제 바뀌나요?',
-      '자정에 자동으로 바뀝니다. 화면은 늘 오늘 명단만 보여줍니다.\n'
-      + '어제 명단은 <em>지난 명단</em> → <em>이전</em>에서 보고, 하루 더 지나면 지워집니다.']
+      '화면에 <em>연결 안 됨</em>이 표시됩니다.\n'
+      + '개별 예약 변경은 기기에 저장됐다가 다시 연결되면 반영됩니다.'],
+    ['명단이 사라지면?',
+      '메뉴 → <em>지난 명단</em>에서 원하는 시점의 명단을 복사해 다시 등록하면 됩니다.'],
+    ['업데이트 알림이 뜨면?',
+      '<em>업데이트</em> 버튼을 누르거나, 앱을 완전히 종료한 뒤 다시 실행하면 업데이트가 적용됩니다.\n'
+      + '당장 업데이트하지 않아도 문제없습니다.']
   ];
   var CHEV = '<span class="qchev"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L16 12 L9 19"/></svg></span>';
 
@@ -3459,6 +3452,9 @@ window.dispatchEvent(new Event('fb-ready'));
             + '<div class="a">' + f[1] + '</div></div>';
         }).join('')
       + '</div>');
+    // 시트 높이는 고정하지 않는다 — 질문 7개 + 답 1개(한 번에 하나만 펼침)면 어느 폰에서도
+    // 82vh 에 한참 못 미쳐 스크롤이 안 생긴다. 펼치면 답 한 뼘(~80px)만큼 위로 늘어나
+    // 답 전체가 보이고, 접으면 되돌아온다. (max-height:82vh 는 안전망으로만)
   });
   // 한 번에 하나만 펼친다
   document.getElementById('sheetBody').addEventListener('click', function(e){
@@ -3498,7 +3494,7 @@ window.dispatchEvent(new Event('fb-ready'));
         '<b>설치</b>'
       ]);
   }
-  var INSTALL_NOTE = '<p class="sheetNote plain" style="margin:-4px 0 14px">'
+  var INSTALL_NOTE = '<p class="sheetNote">'
     + '「익순이」는 홈 화면에 추가하면 앱처럼 전체 화면으로 열립니다.</p>';
 
   // 이미 앱으로 설치해 쓰는 중이면 서랍에서 「앱으로 설치하기」는 뺀다 (매장 폰은 대개 설치돼 있음)
@@ -3565,7 +3561,7 @@ window.dispatchEvent(new Event('fb-ready'));
     });
     snaps.sort(function(a, b){ return (b.e.at || 0) - (a.e.at || 0); });
     days.sort(function(a, b){ return a.key < b.key ? 1 : -1; });   // 최근 날짜 먼저
-    if (!snaps.length && !days.length) return '<p class="lgempty">지난 명단이 없습니다</p>';
+    if (!snaps.length && !days.length) return '<p class="sheetMsg">지난 명단이 없습니다</p>';
     var html = '<div class="bklist">';
     if (snaps.length){
       html += '<div class="bkgroup">오늘</div>';
@@ -3591,7 +3587,7 @@ window.dispatchEvent(new Event('fb-ready'));
   // 상세: 그 시점 명단을 읽기 전용 목록으로 (본 화면처럼 시간대로 묶고 방문·취소 색). 복사는 단톡방 양식 그대로.
   function bkRosterHtml(items){
     var list = (items || []).filter(function(it){ return it && it.time; });
-    if (!list.length) return '<p class="lgempty">빈 명단</p>';
+    if (!list.length) return '<p class="sheetMsg">명단이 비어 있습니다</p>';
     return groupByTime(list.slice().sort(sortItems)).map(function(g){
       return '<div class="bkvt">' + esc(g.time) + '</div>'
         + g.items.map(function(it){
@@ -3646,11 +3642,11 @@ window.dispatchEvent(new Event('fb-ready'));
     bkMap = null;
     openSheet('지난 명단', '');
     var show = function(html){ var b = document.getElementById('sheetBody'); if (b && bkTitled()) b.innerHTML = html; };
-    if (!connReady()){ show('<p class="lgempty">연결되면 볼 수 있습니다</p>'); return; }
+    if (!connReady()){ show('<p class="sheetMsg">연결되면 볼 수 있습니다</p>'); return; }
     var settled = false;
     // 빠르게 오면(대개 그렇다) 자리표시가 깜빡이지 않게 — 300ms 넘게 걸릴 때만 「불러오는 중…」
-    var slow = setTimeout(function(){ if (!settled) show('<p class="lgempty">불러오는 중…</p>'); }, 300);
-    var fail = function(){ if (!settled){ settled = true; clearTimeout(slow); show('<p class="lgempty">불러오지 못했습니다</p>'); } };
+    var slow = setTimeout(function(){ if (!settled) show('<p class="sheetMsg">불러오는 중…</p>'); }, 300);
+    var fail = function(){ if (!settled){ settled = true; clearTimeout(slow); show('<p class="sheetMsg">불러오지 못했습니다</p>'); } };
     setTimeout(fail, 8000);   // 응답이 없어 계속 비어 있지 않게
     Promise.all([
       fb().backupList(viewDate).catch(function(){ return {}; }),
@@ -3668,7 +3664,7 @@ window.dispatchEvent(new Event('fb-ready'));
       });
       var dm = res[1] || {};
       Object.keys(dm).forEach(function(k){ bkMap[k] = dm[k]; });
-      if (!Object.keys(bkMap).length){ show('<p class="lgempty">지난 명단이 없습니다</p>'); return; }
+      if (!Object.keys(bkMap).length){ show('<p class="sheetMsg">지난 명단이 없습니다</p>'); return; }
       bkRenderList();
     }, fail);
   }
@@ -3902,8 +3898,10 @@ window.dispatchEvent(new Event('fb-ready'));
     setTimeout(checkUpdate, 4000);
     // 화면 높이가 달라졌을 수 있다 (키보드가 열린 채 복귀했을 수도).
     // applyViewport 가 현재 visualViewport 로 --kb 와 keyboard-open 을 다시 잡는다.
+    // iOS 복귀 애니메이션 동안 높이 보고가 흔들려서, 한 번이 아니라 여러 번 잰다
+    // (40·140·320·600ms) — "복귀 후 하단 바 사라짐" 방지.
     applyViewport();
-    setTimeout(applyViewport, 300);
+    remeasureViewport();
     // 백그라운드에 있는 동안 날짜가 넘어갔을 수 있다.
     // 먼저 확인하지 않으면 어제 명단을 「오늘」로 띄운 채 체크하게 된다.
     if (rolloverIfNeeded()) return;
