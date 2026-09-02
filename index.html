@@ -574,13 +574,13 @@ window.setThemeChrome = function(t){
   }
   /* 좌우 여백은 .sheet 가 아니라 안쪽 요소에 준다 — #sheetBody 가 시트 가장자리까지
      닿아, 스크롤바가 (내용 사이가 아니라) 시트 모서리에 붙는다. 내용은 좌우 대칭 18px. */
-  .sheet h3{flex:0 0 auto;margin:0 18px 8px;font-size:17px;font-weight:800;letter-spacing:-.02em}
+  .sheet h3{flex:0 0 auto;display:flex;align-items:center;gap:6px;margin:0 18px 8px;font-size:17px;font-weight:800;letter-spacing:-.02em}
   #sheetBody{
     flex:1 1 auto;min-height:0;min-width:0;padding:0 18px;
     overflow-y:auto;overflow-x:hidden;
     -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   }
-  .sheetBtns{flex:0 0 auto;display:flex;gap:8px;margin:0 18px}
+  .sheetBtns{flex:0 0 auto;display:flex;gap:8px;margin:8px 18px 0}  /* 위 8px = 스크롤 목록과 버튼이 안 붙게 */
   .sheetBtns .sheetClose{flex:1}
   .sheetNever{
     flex:1;padding:13px 0;border-radius:11px;
@@ -588,7 +588,7 @@ window.setThemeChrome = function(t){
     color:var(--dim);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
   }
   .sheetNever:active{color:var(--text)}
-  .faq{margin:0 0 14px}
+  .faq{padding-bottom:8px}  /* margin 아님 — 스크롤 끝에서 margin-bottom 은 iOS 에서 안 보임 */
   .qa{border-bottom:1px solid var(--line)}
   .qa:last-child{border-bottom:0}
   .qa .q{
@@ -597,6 +597,7 @@ window.setThemeChrome = function(t){
     font-family:inherit;font-size:14px;font-weight:700;color:var(--text);
     text-align:left;letter-spacing:-.02em;line-height:1.35;
   }
+  .qa:first-child .q{padding-top:6px}   /* 첫 질문은 제목에 붙인다 (다른 시트 제목↔내용 간격에 맞춤) */
   .qa .qchev{margin-left:auto;flex:0 0 auto;color:var(--off);transition:transform .15s}
   .qa.open .q{color:var(--waitTx)}
   .qa.open .qchev{transform:rotate(90deg);color:var(--waitTx)}
@@ -612,6 +613,7 @@ window.setThemeChrome = function(t){
     border-left:3px solid var(--off);border-radius:12px;
     padding:12px 14px 11px;margin:0 0 10px;
   }
+  .plat:last-child{margin-bottom:0}   /* 마지막 카드 밑 여백 안 쌓임 */
   .plat.ios{border-left-color:var(--wait)}
   .plat.and{border-left-color:var(--go)}
   .plat .ph{display:flex;align-items:center;gap:7px;margin-bottom:10px}
@@ -635,13 +637,13 @@ window.setThemeChrome = function(t){
     color:var(--text);line-height:0;vertical-align:middle;
   }
   .key svg{display:block}
-  .sheetNote{font-size:13px;line-height:1.6;color:var(--dim);margin:-4px 0 14px}
+  .sheetNote{font-size:13px;line-height:1.6;color:var(--dim);margin:0 0 14px}
   /* 변경 내역 */
   .lgrow{
     display:flex;align-items:baseline;gap:10px;padding:9px 0;
     border-top:1px solid var(--line);font-size:14px;
   }
-  .lgrow:first-child{border-top:0}
+  .lgrow:first-child{border-top:0;padding-top:2px}
   .lgt{flex:0 0 42px;color:var(--dim);font-size:13px;font-variant-numeric:tabular-nums}
   .lgk{flex:0 0 auto;font-weight:700;color:var(--text)}
   .lgk.go{color:var(--goTx)}
@@ -652,6 +654,7 @@ window.setThemeChrome = function(t){
 
   /* 「지난 명단」 시트 — 목록은 「최근 변경 내역」(.lgrow) 처럼 한 줄(시각·요약·›), 행을 누르면 상세.
      요약 배색·굵기는 상단 「방문 n · 취소 n」(.leadsub) 과 맞춘다. */
+  .bklist{padding-top:2px}   /* 다른 시트처럼 제목 밑 선 없이 — 8px 뒤 바로 내용 */
   .bkrow{
     display:flex;align-items:center;gap:10px;
     padding:12px 0;border-top:1px solid var(--line);cursor:pointer;
@@ -661,32 +664,44 @@ window.setThemeChrome = function(t){
   .bkt{flex:0 0 46px;font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
   .bksum{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums;
          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* 방문 초록 · 취소 빨강 — 시트 안 어디서나 (목록 요약·상세 명단 공용). 상단 「방문 n·취소 n」과 동일 */
+  /* 방문 초록 · 취소 빨강 — 「지난 명단」 목록의 요약(.bksum) 용. 상단 「방문 n·취소 n」과 같은 색.
+     (상세 명단은 .bkvrow.go/.off 로 따로 처리) */
   #sheetBody em.go, #sheetBody em.off{font-style:normal;font-weight:700}
   #sheetBody em.go{color:var(--goTx)}
   #sheetBody em.off{color:var(--warn)}
   .bksep{color:var(--off);margin:0 5px}
-  .bkchev{flex:0 0 auto;color:var(--off);font-size:18px;line-height:1}
-  /* 구역 라벨 (오늘 / 어제) — 상세의 시간 헤더 .bkvt 와 같은 크기·굵기 */
+  .bkchev{flex:0 0 auto;color:var(--off);display:flex;align-items:center}  /* FAQ 화살표와 같은 아이콘 */
+  /* 구역 라벨(오늘/어제) · 상세 시간 헤더 — 완전히 같은 서체·크기 */
   .bkgroup,.bkvt{
-    font-size:12px;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;
+    font-size:13px;font-weight:700;letter-spacing:.02em;font-variant-numeric:tabular-nums;color:var(--dim);
   }
-  .bkgroup{padding:15px 0 7px;border-top:1px solid var(--line);margin-top:4px;color:var(--dim)}
-  .bkgroup + .bkrow{border-top:0}
-  .bklist > .bkgroup:first-child{border-top:0;margin-top:0;padding-top:2px}
+  .bkgroup{padding:15px 0 7px;border-top:1px solid var(--line);margin-top:4px}
+  .bkgroup + .bkrow{border-top:0;padding-top:4px}  /* 라벨 바로 밑 행은 라벨에 붙인다 (상세 .bkvt→.bkvrow 간격과 맞춤) */
+  .bklist > .bkgroup:first-child{border-top:0;margin-top:0;padding-top:6px}  /* 첫 라벨: 제목과 숨 쉴 틈 */
   /* 상세: 그 시점 명단을 읽기 전용으로 (본 화면처럼 시간대로 묶고 방문·취소 색 구분) */
-  .bkback{cursor:pointer}
-  .bkback::before{content:"‹ ";color:var(--dim);font-weight:400}
-  .bkback:active{color:var(--dim)}
-  .bkvlist{margin:0 0 8px}
-  .bkvt{color:var(--off);padding:8px 0 3px}
-  .bkvt:first-child{padding-top:2px}
-  /* 「변경 내역」(.lgrow) 과 같은 리듬 — baseline 정렬, gap 10, 다만 시간대로 묶이므로 행 구분선은 없음.
-     이름·인원·상태를 왼쪽에 붙인다(좌우로 벌어지지 않게). */
-  .bkvrow{display:flex;align-items:baseline;gap:10px;padding:4px 0;font-size:14px;line-height:1.35}
+  .bkback{  /* 목록으로 — 화살표만. 제목 글자와 어울리게 (같은 색, 제목 높이에 맞춘 크기) */
+    flex:0 0 auto;display:inline-flex;align-items:center;
+    margin-left:-2px;padding:3px 5px 3px 0;
+    color:var(--text);cursor:pointer;line-height:1;
+  }
+  .bkback::before{content:"‹";font-size:23px;font-weight:400;position:relative;top:-1px}
+  .bkback:active{opacity:.4}
+  /* 하단 버튼 위 공백은 margin 이 아니라 padding — 스크롤 컨테이너(#sheetBody) 안에서
+     마지막 자식의 margin-bottom 은 iOS 에서 스크롤 끝까지 안 보인다. */
+  .bkvlist{padding:2px 0 8px}
+  /* 시간대 헤더 — 구분선은 헤더에 붙는다(위 여백 margin-top, 선 아래 살짝) */
+  .bkvt{border-top:1px solid var(--line);margin-top:13px;padding:4px 0 6px}
+  .bkvt:first-child{border-top:0;margin-top:0;padding-top:2px}
+  /* 시간대별 읽기 전용 명단. 상태는 본 화면처럼 이름 색으로 (방문 초록 / 취소 빨강) + 작은 글자.
+     칸(태그) 없이 — 밀도 높은 목록이라 색만으로 충분하고 더 깔끔하다. */
+  .bkvrow{display:flex;align-items:baseline;gap:7px;padding:5px 0;font-size:14px;line-height:1.3}
   .bkvrow .nm{min-width:0;color:var(--text);font-weight:600;
               white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bkvrow .px{flex:0 0 auto;color:var(--dim);font-size:13px;font-variant-numeric:tabular-nums}
+  .bkvrow .st{flex:0 0 auto;font-size:12px;font-weight:700}
+  .bkvrow.go .st{color:var(--goTx)}
+  .bkvrow.off .nm{color:var(--dim)}   /* 취소는 흐리게 — 안 올 손님 */
+  .bkvrow.off .st{color:var(--warn)}
   /* 상세 화면에서 시트 기본 하단바에 「명단 복사」를 하나 더 끼운다.
      이 화면의 주동작이므로 주황(.btn.primary 계열) — 닫기와 크기·모양은 같고 색만 다르다. */
   .sheetBtns .bkcopy{flex:1;border:0;background:var(--wait);color:var(--onWait);font-weight:700}
@@ -700,16 +715,17 @@ window.setThemeChrome = function(t){
   }
   .qrcard svg{display:block;width:100%;height:auto}
   .wnet{
-    display:flex;align-items:center;gap:10px;padding:11px 13px;margin-bottom:8px;
+    display:flex;align-items:center;gap:10px;padding:11px 13px;
     background:var(--panel2);border:1px solid var(--line);border-radius:12px;
   }
+  .wnet + .wnet{margin-top:8px}   /* 카드 사이만 — 마지막 카드 밑엔 여백 안 쌓임 */
   .wnet .k{font-size:12px;font-weight:700;color:var(--dim);flex:0 0 52px}
   .wnet .v{font-size:15px;font-weight:700;color:var(--text);flex:1;min-width:0;word-break:break-all}
   .about{font-size:14px;line-height:1.75;color:var(--dim);margin:0 0 12px}
   .about:last-of-type{margin-bottom:16px}
   .about b{color:var(--text);font-weight:700}
   .credit{
-    border-top:1px solid var(--line);padding-top:12px;margin:16px 0 14px;
+    border-top:1px solid var(--line);padding-top:12px;margin:16px 0 2px;
     font-size:12px;line-height:1.6;color:var(--dim);letter-spacing:.01em;
   }
   .sheetClose{
@@ -3550,7 +3566,7 @@ window.dispatchEvent(new Event('fb-ready'));
     return '<div class="bkrow" data-key="' + esc(key) + '">'
       + '<span class="bkt">' + esc(label) + '</span>'
       + '<span class="bksum">' + bkSummary(e) + '</span>'
-      + '<span class="bkchev">›</span></div>';
+      + '<span class="bkchev"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L16 12 L9 19"/></svg></span></div>';
   }
   function backupSheetHtml(map){
     var snaps = [], days = [];
@@ -3591,10 +3607,11 @@ window.dispatchEvent(new Event('fb-ready'));
     return groupByTime(list.slice().sort(sortItems)).map(function(g){
       return '<div class="bkvt">' + esc(g.time) + '</div>'
         + g.items.map(function(it){
-            var tail = it.status === 'arrived' ? '<em class="go">방문</em>'
-                     : it.status === 'cancelled' ? '<em class="off">취소</em>' : '';
-            return '<div class="bkvrow"><span class="nm">' + esc(it.name)
-              + '</span><span class="px">' + esc(String(it.pax)) + '명</span>' + tail + '</div>';
+            var cls = it.status === 'arrived' ? ' go' : it.status === 'cancelled' ? ' off' : '';
+            var st  = it.status === 'arrived' ? '<span class="st">방문</span>'
+                    : it.status === 'cancelled' ? '<span class="st">취소</span>' : '';
+            return '<div class="bkvrow' + cls + '"><span class="nm">' + esc(it.name)
+              + '</span><span class="px">' + esc(String(it.pax)) + '명</span>' + st + '</div>';
           }).join('');
     }).join('');
   }
@@ -3603,9 +3620,8 @@ window.dispatchEvent(new Event('fb-ready'));
     if (!e || !e.items){ bkRenderList(); return; }
     var p = e.kind === 'day' ? e.date.split('-') : null;
     var title = document.getElementById('sheetTitle');
-    title.innerHTML = '<span class="bkback"></span>';
-    title.querySelector('.bkback').textContent =
-      e.kind === 'day' ? ('어제 ' + (+p[1]) + '/' + (+p[2])) : ('오늘 ' + backupWhen(e.at));
+    var when = e.kind === 'day' ? ('어제 ' + (+p[1]) + '/' + (+p[2])) : ('오늘 ' + backupWhen(e.at));
+    title.innerHTML = '<span class="bkback" role="button" aria-label="목록으로"></span><span>' + esc(when) + '</span>';
     title.querySelector('.bkback').onclick = bkBack;
     document.getElementById('sheetBody').innerHTML = '<div class="bkvlist">' + bkRosterHtml(e.items) + '</div>';
     // 시트 기본 하단바(닫기)에 「명단 복사」를 하나 끼운다 — 닫기와 크기·모양 같고, 이 화면 주동작이라 주황
