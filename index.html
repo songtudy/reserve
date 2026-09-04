@@ -31,6 +31,13 @@ window.setThemeChrome = function(t){
   try { if (localStorage.getItem('theme') === 'light') t = 'light'; } catch(e){}
   window.setThemeChrome(t);
 })();
+// 전에 이 기기에서 로그인했으면 잠금 화면을 아예 그리지 않는다 (앱 열 때마다 번쩍이지 않게).
+// Auth SDK 는 네트워크에서 로드된 뒤에야 로그인 상태를 알려주므로, 그때까지의 공백을 이 표식이 메운다.
+// 보안이 아니라 깜빡임 방지용 — 실제 차단은 Firebase 규칙이 한다. 표식만 조작해도 명단은 못 읽는다.
+// 로그인이 아닌 것으로 밝혀지면 아래 IIFE 가 이 속성을 지우고 잠금을 띄운다.
+(function(){
+  try { if (localStorage.getItem('ix-authed') === '1') document.documentElement.setAttribute('data-authed','1'); } catch(e){}
+})();
 </script>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -41,7 +48,7 @@ window.setThemeChrome = function(t){
     --radius:14px;
     /* 바탕 */
     --ink:#0f1319;      --panel:#161b22;    --panel2:#1c222b;
-    --line:#252c36;     --press:#26313d;
+    --line:#252c36;     --press:#26313d;   --keyDn:#404e5f;   /* 키패드 눌림 — --press 보다 확실히 밝게 */
     --text:#f0f3f6;     --dim:#8792a0;      --off:#646f84;
     --ph:#7b8695;
     --scrim:rgba(6,9,13,.72);   --scrimLite:rgba(6,9,13,.6);
@@ -55,12 +62,15 @@ window.setThemeChrome = function(t){
     /* 취소·경고 — 붉은색 */
     --warn:#c9736a;     --warnBg:#1a1618;   --warnTag:#332323;  --warnTagTx:#d2938c;
     --warnName:#b8938e; --warnPax:#a8837e;  --warnPaxBg:#241c1d;
+    /* 초기화 버튼 글자 — 아래 바탕(--warnBg)에서도, 그 위로 --warn 이 42% 차올라도 읽힌다
+       (9.06:1 / 4.68:1). --warnTagTx 는 채움 위에서 3.65:1 로 묻혔다. --onWait·--onGo 와 같은 작명 */
+    --onWarn:#e0aca6;
     /* 붙여넣기 오류 (줄 강조 + 안내문) */
     --errRow:rgba(201,115,106,.16);   --errTx:#e0a49d;
   }
   html[data-theme="light"]{
     --ink:#f4f6f9;      --panel:#ffffff;    --panel2:#eef1f6;
-    --line:#dfe4ec;     --press:#e2e7ef;
+    --line:#dfe4ec;     --press:#e2e7ef;   --keyDn:#ccd4de;
     --text:#161a20;     --dim:#5c6772;      --off:#7e8899;
     --ph:#676f7d;
     --scrim:rgba(20,26,34,.44); --scrimLite:rgba(20,26,34,.34);
@@ -72,6 +82,7 @@ window.setThemeChrome = function(t){
     --goTagTx:#176b49;  --goName:#4a6a5b;
     --warn:#b43f36;     --warnBg:#fdf1ef;   --warnTag:#fadedb;  --warnTagTx:#a2463c;
     --warnName:#855c55; --warnPax:#7a4f48;  --warnPaxBg:#f6e7e5;
+    --onWarn:#7a2a20;   /* 8.72:1 / 4.62:1 — 라이트는 --warnTagTx 가 채움 위에서 2.90:1 이었다 */
     --errRow:rgba(192,72,60,.12);   --errTx:#9e4438;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -195,8 +206,9 @@ window.setThemeChrome = function(t){
   .leadsub .tally-off{color:var(--warn);font-weight:700}
   .leadsub .pcsep{color:var(--off)}
 
-  /* 새 버전 알림 띠 — 헤더와 목록 사이의 안내 줄(순수 표시, 안 눌림). 동작은 하단
-     「새로고침」→「업데이트」 버튼. flex 항목이라 목록을 아래로 밀 뿐 안 겹친다. */
+  /* 새 버전 알림 띠 — 헤더와 목록 사이의 안내 줄. 순수 표시(안 눌림): 실행은 하단
+     「새로고침」→「업데이트」(금색) 버튼이 맡는다. 띠와 버튼이 같은 금색이라 한 쌍으로 읽힌다.
+     flex 항목이라 목록을 아래로 밀 뿐 안 겹친다. */
   .updbar{
     flex:0 0 auto;display:block;width:100%;
     padding:8px 14px;text-align:center;
@@ -220,10 +232,10 @@ window.setThemeChrome = function(t){
   }
   #qBack{
     position:absolute;left:3px;top:50%;transform:translateY(-50%);
-    width:36px;height:36px;display:grid;place-items:center;
+    width:36px;height:36px;display:grid;place-items:center;border-radius:9px;
     background:none;border:0;color:var(--dim);cursor:pointer;
   }
-  #qBack:active{color:var(--text)}
+  #qBack:active{background:var(--press)}   /* 옆의 검색바 버튼(.searchbar button)과 같은 눌림 */
   .qcount{
     position:absolute;right:40px;top:50%;transform:translateY(-50%);
     font-size:12px;font-weight:700;color:var(--dim);
@@ -388,7 +400,9 @@ window.setThemeChrome = function(t){
     background:var(--panel2);color:var(--text);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
   }
   .ebtn #e-ok{background:var(--wait);color:var(--onWait);border-color:var(--wait)}
-  .ebtn button:active{filter:brightness(.9)}
+  /* 눌림: 채운 버튼(금색)은 살짝 어둡게, 나머지(--panel2)는 --press 배경 — 앱 공통 규칙 */
+  .ebtn #e-ok:active{filter:brightness(.92)}
+  .ebtn #e-no:active{background:var(--press)}
 
   .menu{display:flex;gap:6px;padding:0 10px 10px}
   .menu button{
@@ -472,7 +486,8 @@ window.setThemeChrome = function(t){
   }
   .btn.primary{background:var(--wait);color:var(--onWait)}
   .btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
-  .btn:active{filter:brightness(.9)}
+  .btn.primary:active{filter:brightness(.92)}
+  .btn.ghost:active{background:var(--press)}
   textarea::placeholder{ color:var(--ph) }
 
   /* footer — 앱 셸의 고정 항목. 스크롤은 위 .wrap 안에서만 일어난다 */
@@ -562,6 +577,9 @@ window.setThemeChrome = function(t){
     display:flex;align-items:flex-end;justify-content:center;
   }
   .sheetScrim.hide{display:none}
+  /* 잠금화면(300) 위로 올린다 — 설치 안내는 로그인 전에 보여야 하는 것이라 잠금보다 앞이다.
+     조건은 .lock 의 표시 조건과 정확히 짝(html[data-authed="1"] .lock{display:none}) */
+  html:not([data-authed="1"]) .sheetScrim{ z-index:310 }
   /* 메인 앱셸처럼 — 제목·버튼은 고정, 가운데(#sheetBody)만 세로 스크롤.
      긴 FAQ·명단에서도 제목·닫기가 안 사라지고 좌우 스크롤도 안 생긴다. */
   .sheet{
@@ -587,7 +605,7 @@ window.setThemeChrome = function(t){
     border:1px solid var(--line);background:none;
     color:var(--dim);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;
   }
-  .sheetNever:active{color:var(--text)}
+  .sheetNever:active{background:var(--press)}   /* 옆의 닫기·ghost 버튼과 같은 눌림 */
   .faq{padding-bottom:8px}  /* margin 아님 — 스크롤 끝에서 margin-bottom 은 iOS 에서 안 보임 */
   .qa{border-bottom:1px solid var(--line)}
   .qa:last-child{border-bottom:0}
@@ -598,6 +616,7 @@ window.setThemeChrome = function(t){
     text-align:left;letter-spacing:-.02em;line-height:1.35;
   }
   .qa:first-child .q{padding-top:6px}   /* 첫 질문은 제목에 붙인다 (다른 시트 제목↔내용 간격에 맞춤) */
+  .qa .q:active{background:var(--press)}   /* 시간대 헤더(.ghead)와 같은 접기 토글 눌림 */
   .qa .qchev{margin-left:auto;flex:0 0 auto;color:var(--off);transition:transform .15s}
   .qa.open .q{color:var(--waitTx)}
   .qa.open .qchev{transform:rotate(90deg);color:var(--waitTx)}
@@ -750,9 +769,104 @@ window.setThemeChrome = function(t){
     border:1px solid var(--line);background:var(--panel2);
     color:var(--text);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;
   }
+  .sheetClose:active{background:var(--press)}
+
+  /* ---------- 잠금 화면 (공유 비밀번호) ----------
+     네이티브 키보드를 안 쓴다 — 직접 만든 숫자 키패드. iOS 는 입력칸에 포커스가 가면
+     비주얼 뷰포트를 밀어 올리는데(position:fixed 도 같이 딸려 올라감) CSS 로는 못 막는다.
+     키패드로 바꾸면 그 원인 자체가 없어져 화면이 완전히 정적이다.
+     토스트(200)보다 위. 로그인 상태를 알기 전까지, 그리고 로그인 안 됐을 때 앱 전체를 덮는다. */
+  .lock{
+    /* 높이를 svh(주소창이 펼쳐진 기준의 '작은 뷰포트')로 고정한다.
+       inset:0 이면 사파리 주소창이 접힐 때 높이가 변하고, 가운데 정렬이라
+       그 절반만큼 내용이 위로 튄다. svh 는 그 변화에 안 흔들린다.
+       (홈 화면 앱 모드엔 주소창이 없어 원래 안 튀지만, 브라우저로 열 때를 위해.) */
+    position:fixed;top:0;left:0;right:0;z-index:300;
+    height:100vh;height:100svh;
+    background:var(--ink);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    /* safe-area-inset 을 쓰지 않는다 — 내용이 세로 가운데 정렬이고 위아래로 180px 넘게
+       남아서 노치/홈바에 닿을 일이 없는데, env() 가 뒤늦게 0 → 실제값으로 풀리면
+       가운데가 그만큼 밀려 실행 직후 화면이 한 번 움직인다. 고정값이면 첫 프레임부터 확정. */
+    padding:20px 24px;
+  }
+  /* 해제될 때 .2s 페이드. 이 앱은 화면 전체를 덮는 것(팝업·룰렛·잠금)은 순수 페이드,
+     떠 있는 오버레이(서랍·시트)만 슬라이드한다 — 잠금은 전자라 transform 없이 페이드만.
+     ease-out 이라 빠르게 시작해 부드럽게 잦아든다(dismiss 에 맞는 결).
+     .2s 는 그 사이 boot() 이 명단을 받아 첫 로그인의 빈 화면을 가리는 시간도 겸한다. */
+  .lock{transition:opacity .2s ease-out}
+  .lock.out{opacity:0;pointer-events:none}
+  .lock.hide{display:none}
+  html[data-authed="1"] .lock{display:none}   /* 재실행 시 깜빡임 방지 (위 head 스크립트) */
+  .lockico{width:56px;height:56px;border-radius:15px;border:1px solid var(--line);background:var(--panel2)}
+  .lockname{margin-top:14px;font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--text)}
+  .locksub{margin-top:3px;font-size:13px;color:var(--dim)}
+  /* 입력한 자릿수 표시 */
+  .lockdots{display:flex;gap:14px;margin-top:26px;height:12px;align-items:center}
+  .lockdots i{
+    width:12px;height:12px;border-radius:50%;
+    border:1.5px solid var(--off);background-color:transparent;
+    transition:background-color .12s, border-color .12s;
+  }
+  /* 라이트에서 --wait(#f5aa14)는 흰 배경 위 대비가 1.8:1 로 거의 안 보인다.
+     --waitTx 는 그 대비용 토큰(다크에선 --wait 와 같은 값). */
+  .lockdots i.on{background-color:var(--waitTx);border-color:var(--waitTx)}
+  .lock.bad .lockdots{animation:lockshake .32s}
+  @keyframes lockshake{
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)}
+    40%{transform:translateX(6px)}   60%{transform:translateX(-4px)} 80%{transform:translateX(2px)}
+  }
+  /* 높이를 '고정'한다 — min-height 면 문구가 뜰 때 1px 늘어 점·키패드가 밀린다.
+     문구는 한 줄에 들어가는 길이로만 쓴다(320px 기준 14자 이하). */
+  .lockmsg{margin-top:12px;font-size:12.5px;line-height:18px;height:18px;
+           color:var(--warn);text-align:center;white-space:nowrap}
+  /* 숫자 키패드 — 원형은 이 앱에서 단계 번호(.step .n)와 같은 결 */
+  .lockpad{
+    display:grid;grid-template-columns:repeat(3, 64px);gap:18px 22px;
+    margin-top:22px;
+  }
+  .lockkey{
+    width:64px;height:64px;border-radius:50%;padding:0;
+    /* 명단 행(.row)과 같은 면 — 앱에서 단독으로 놓인 컨트롤은 전부 배경을 갖는다
+       (행 --panel / 시트 버튼·카드 --panel2 / 링크 복사 칩 --line).
+       투명은 이미 채워진 카드 안쪽(.main·.more)이나 아이콘 버튼에만 쓴다.
+       키패드는 --ink 위에 단독으로 놓이므로 행과 같은 --panel. */
+    border:1px solid var(--line);background:var(--panel);
+    color:var(--text);font-family:inherit;font-size:25px;font-weight:600;
+    font-variant-numeric:tabular-nums;cursor:pointer;
+    display:grid;place-items:center;
+  }
+  /* 눌림 표시. :active 만 쓰면 탭이 100ms 안팎이라 실기기에서 거의 안 보인다 —
+     JS 가 .dn 을 최소 130ms 유지해 준다(:active 는 마우스/보조 입력용 폴백).
+     색은 중립(--keyDn) — 금색은 앱에서 「주동작/선택됨」 뜻이라 숫자키엔 안 쓴다.
+     --press 는 실기기에서 거의 안 보여 한 단계 더 밝은 값을 따로 뒀다. */
+  .lockkey.dn, .lockkey:active{
+    background:var(--keyDn);border-color:var(--keyDn);
+  }
+  .lockkey.blank{border:0;background:none;pointer-events:none}
+  /* 지우기 — 버튼으로 안 감싼다. 숫자 키패드의 공통 관습(아이폰 잠금·전화 다이얼러·
+     안드로이드 PIN 모두 지우기만 아이콘으로 둔다).
+     눌림도 면을 만들지 않는다 — 평소 면이 없는데 누를 때만 원이 생기면 그 순간 숫자키처럼
+     보여 정체가 흔들린다. 대신 아이콘 자체가 밝아진다(--dim → --text).
+     ※ .lockkey.dn 이 앞에 있어 배경을 칠하므로 여기서 다시 none 으로 눌러둔다 */
+  .lockkey.act{border:0;background:none;color:var(--dim)}
+  .lockkey.act.dn, .lockkey.act:active{background:none;color:var(--text)}
+  /* 지울 게 없을 때 — opacity 대신 앱의 3단계 위계 토큰을 그대로 쓴다.
+     --off(가장 흐림) → --dim(평소) → --text(눌림). opacity .3 은 대비 1.6:1 이라
+     키가 사라진 것처럼 보이다 첫 입력에 툭 나타났다. */
+  .lockkey.act:disabled{color:var(--off)}
+  .lockkey svg{display:block}
+  /* 확인 중(.busy) — 키패드를 흐리게 하지 않고 입력만 막는다.
+     45% dim 은 "작동 중"이 아니라 "멈췄다"로 읽혔다. */
+  .lock.busy .lockpad{pointer-events:none}
+  /* 대신 검사 대상인 점이 천천히 숨쉬어 진행 중임을 알린다(인증 왕복 ≈0.7s ≒ 한 호흡).
+     .checking 은 마지막 점의 채움 전환(.12s)이 끝난 뒤에 붙는다 — 겹치면 그 점만 따로
+     깜빡이는 것처럼 보인다 (submitPin 참고). reduced-motion 은 아래 전역 규칙이 끈다. */
+  .lock.checking .lockdots i.on{animation:lockpulse .9s ease-in-out infinite}
+  @keyframes lockpulse{50%{opacity:.3}}
 
   .scrim{
-    position:fixed;inset:0;z-index:50;
+    position:fixed;inset:0;z-index:63;    /* 서랍(61)·룰렛막(62) 위 — 로그아웃 확인창이 서랍에서 바로 뜬다 */
     background:var(--scrim);
     display:grid;place-items:center;
     padding:22px;
@@ -762,30 +876,46 @@ window.setThemeChrome = function(t){
     width:100%;max-width:330px;
     background:var(--panel);border:1px solid var(--line);
     border-radius:16px;padding:19px 18px 15px;
-    /* 평소엔 화면 중앙. 키보드가 올라오면 딱 그 위(약 26px 틈)까지만 올라간다.
-       --kb 가 작을 땐(중앙 배치로 이미 안 가림) 0 → 안 움직임. 125 ≈ 틈 + 다이얼로그 높이 절반.
-       clamp 아래끝: 가로 모드 등 극단적으로 짧은 화면에서 위로 잘려나가는 것 방지. */
-    transition:transform .2s ease;
-    transform:translateY(clamp(calc(120px - 50vh), calc(50vh - var(--kb, 0px) - 125px), 0px));
+    /* 세로 위치는 .scrim 의 place-items:center 가 잡는다. 입력칸이 없어 키보드가 안 뜨므로
+       예전의 --kb 이동은 필요 없다. */
   }
-  .dialog h3{margin:0 0 13px;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.45;white-space:pre-line}
-  .dialog input{
-    width:100%;background:var(--ink);color:var(--text);
-    border:1px solid var(--line);border-radius:11px;
-    padding:12px 13px;font-family:inherit;font-size:16px;font-weight:600;
-    text-align:center;-webkit-appearance:none;appearance:none;
-  }
-  .dialog input::placeholder{color:var(--ph);font-weight:400}
-  .dialog input:focus{outline:2px solid var(--waitTx);outline-offset:-1px}
+  .dialog h3{margin:0 0 4px;font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.45;white-space:pre-line}
+  /* 같은 막에 뜨는 형제 창(룰렛)의 .rltsub 와 같은 크기·색. 아래 여백은 안 준다
+     — 인접 마진 상쇄로 .dbtn 의 margin-top 에 먹혀 무의미하다. */
+  .dialog .dlgnote{margin:0;font-size:12px;line-height:1.5;color:var(--dim)}
   .dbtn{display:flex;gap:8px;margin-top:11px}
   .dbtn button{
     flex:1;padding:12px 0;border-radius:11px;
     border:1px solid var(--line);background:var(--panel2);
     color:var(--text);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;
   }
-  .dbtn #dlgYes{background:var(--wait);color:var(--onWait);border-color:var(--wait)}
-  .dbtn #dlgYes:disabled{background:var(--panel2);color:var(--dim);border-color:var(--line);cursor:default}
-  .dbtn button:active{filter:brightness(.9)}
+  .dbtn #dlgNo:active, .dbtn #rltClose:active{background:var(--press)}   /* 취소·닫기 = --press */
+  .dbtn #rltGo:active{filter:brightness(.92)}                           /* 채운 버튼 = 살짝 어둡게 */
+  /* 「초기화」는 한 번 눌러서가 아니라 「길게 눌러」 실행된다.
+     예전엔 '예' 를 타이핑하게 했는데, 그 키보드가 뜨면 아이폰이 화면(비주얼 뷰포트)을
+     밀어 올려 팝업이 위로 잘려 나갔다. 키보드를 아예 없애되 8/31 실수 방지 장치는
+     남기려고, 한 번의 탭·주머니 오작동으로는 안 되는 이 제스처로 바꿨다.
+     색은 취소된 예약 태그와 같은 --warn 계열 (경보가 아니라 '주의'). */
+  .dbtn #dlgYes{
+    --holdms:1000ms;                       /* 길게 누르기 시간 — JS 의 HOLD_MS 와 같아야 한다 */
+    position:relative;overflow:hidden;
+    background:var(--warnBg);border-color:var(--warnTag);color:var(--onWarn);
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  .dbtn #dlgYes.holdmode{ touch-action:none }            /* 길게 누르기 제스처를 스크롤로 뺏기지 않게 */
+  .dbtn #dlgYes.holdmode:active{filter:none}             /* 차오르는 면이 눌림을 말한다 — 겹치지 않게 */
+  .dbtn #dlgYes:not(.holdmode):active{filter:brightness(1.12)}   /* 탭 모드는 눌림에 밝아진다 */
+  /* 누르는 동안 버튼 전체가 왼쪽부터 차오른다. 글자는 --onWarn 이라 채움 위에서도 읽힌다
+     (다크 4.68:1 / 라이트 4.62:1) — 글자색을 안 바꾸면 여기서 3.65 / 2.90 으로 묻혔다. */
+  .dbtn #dlgYes .hf{
+    position:absolute;inset:0;background:var(--warn);opacity:.42;
+    transform:scaleX(0);transform-origin:left;transition:transform .18s ease;
+  }
+  .dbtn #dlgYes.hold .hf{transform:scaleX(1);transition:transform var(--holdms) linear}
+  .dbtn #dlgYes .ht{position:relative}
+  @media (prefers-reduced-motion:reduce){
+    .dbtn #dlgYes.hold .hf{transition:transform var(--holdms) steps(24)}
+  }
 
   /* ---------- 화장실 청소 룰렛 (이스터에그) ---------- */
   /* 서랍(61) 위 — 롱프레스로 열 때 빠져나가는 서랍이 룰렛 위를 스치지 않게 */
@@ -865,7 +995,7 @@ window.setThemeChrome = function(t){
     </div>
   </header>
 
-<div class="updbar hide" id="updBar">새 버전이 나왔어요</div>
+<div class="updbar hide" id="updBar">새 버전이 나왔습니다</div>
 
 <div class="searchbar hide" id="searchbar">
   <button type="button" id="qBack" aria-label="검색 닫기"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 L8 12 L15 19"/></svg></button>
@@ -879,7 +1009,7 @@ window.setThemeChrome = function(t){
 
   <div class="panel hide" id="pastePanel">
     <h2 id="pasteTitle">오늘 예약 명단 붙여넣기</h2>
-    <p id="pasteHint">양식에 맞게 붙여넣어 주세요.</p>
+    <p id="pasteHint">양식에 맞게 붙여넣어 주세요</p>
     <div class="tawrap">
       <div class="hl" id="hl" aria-hidden="true"></div>
       <textarea id="ta" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off" aria-label="예: 14:00 임동현 2명"></textarea>
@@ -941,6 +1071,8 @@ window.setThemeChrome = function(t){
   <button type="button" class="dwitem" id="aboutBtn">익순이란?</button>
   <button type="button" class="dwitem" id="faqBtn">자주 묻는 질문</button>
   <button type="button" class="dwitem" id="installBtn">앱으로 설치하기</button>
+  <div class="dwsep"></div>
+  <button type="button" class="dwitem" id="logoutBtn">로그아웃</button>
   <div class="dwsep push"></div>
   <div class="dwtheme">
     <span class="dwthlab">테마</span>
@@ -965,11 +1097,13 @@ window.setThemeChrome = function(t){
 
 <div class="scrim hide" id="scrim">
   <div class="dialog">
-    <h3 id="dlgTitle">명단을 초기화할까요?</h3>
-    <input type="text" id="dlgInput" placeholder="예" autocomplete="off" autocorrect="off" spellcheck="false">
+    <h3 id="dlgTitle">오늘 명단을 초기화할까요?</h3>
+    <p class="dlgnote hide" id="dlgNote"></p>
     <div class="dbtn">
       <button type="button" id="dlgNo">취소</button>
-      <button type="button" id="dlgYes" disabled>확인</button>
+      <!-- 입력칸 없음 — 네이티브 키보드를 안 띄워야 팝업이 안 밀린다. 길게 눌러 실행.
+           버튼 글자는 앱의 다른 버튼처럼 「동작 이름」만 — 조작법은 위 안내문이 맡는다. -->
+      <button type="button" id="dlgYes"><span class="hf"></span><span class="ht">초기화</span></button>
     </div>
   </div>
 </div>
@@ -977,7 +1111,7 @@ window.setThemeChrome = function(t){
 <div class="scrim hide" id="rltScrim">
   <div class="rlt">
     <h3>🚽 화장실 청소 룰렛</h3>
-    <p class="rltsub">이름을 띄어쓰기로 구분해 입력하세요</p>
+    <p class="rltsub">이름을 띄어쓰기로 구분해 입력해 주세요</p>
     <input type="text" id="rltInput" placeholder="예: 동현 동주 동희 동욱" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
     <div class="rltnames" id="rltNames"></div>
     <p class="rltresult hide" id="rltResult"></p>
@@ -990,11 +1124,38 @@ window.setThemeChrome = function(t){
 
 <div class="toast" id="toast"></div>
 
+<!-- 잠금 화면 — 로그인 상태를 확인하기 전까지 기본으로 떠 있다(=기본 잠김).
+     입력칸(<input>)이 없다: 네이티브 키보드를 띄우지 않아야 화면이 안 밀린다. -->
+<div class="lock" id="lock">
+  <img class="lockico" src="apple-touch-icon.png" alt="" width="56" height="56" draggable="false">
+  <div class="lockname">익순이</div>
+  <div class="locksub">익선취향 예약 매니저</div>
+  <div class="lockdots" id="lockDots" role="status" aria-label="비밀번호 입력"></div>
+  <div class="lockmsg" id="lockMsg" role="status"></div>
+  <div class="lockpad" id="lockPad">
+    <button type="button" class="lockkey" data-d="1">1</button>
+    <button type="button" class="lockkey" data-d="2">2</button>
+    <button type="button" class="lockkey" data-d="3">3</button>
+    <button type="button" class="lockkey" data-d="4">4</button>
+    <button type="button" class="lockkey" data-d="5">5</button>
+    <button type="button" class="lockkey" data-d="6">6</button>
+    <button type="button" class="lockkey" data-d="7">7</button>
+    <button type="button" class="lockkey" data-d="8">8</button>
+    <button type="button" class="lockkey" data-d="9">9</button>
+    <span class="lockkey blank"></span>
+    <button type="button" class="lockkey" data-d="0">0</button>
+    <button type="button" class="lockkey act" id="lockDel" aria-label="지우기"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6H9.5L3 12l6.5 6H20a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/><path d="M16 10l-4 4M12 10l4 4"/></svg></button>
+  </div>
+</div>
+
 <script type="module">
 // ---------- Firebase 연결 ----------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getDatabase, ref, get, set, update, remove, onValue, off, goOffline, goOnline }
   from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+         setPersistence, browserLocalPersistence }
+  from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA62A2jtIE77DgOcJ17Jb6S9gH4oTeNeKw",
@@ -1006,7 +1167,8 @@ const firebaseConfig = {
   appId: "1:456621961785:web:a2ba82fb70d6f198b5d3e8"
 };
 
-const db = getDatabase(initializeApp(firebaseConfig));
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 // dev/prod 판정 — 실제 배포 주소일 때만 prod, 그 외 전부 dev(roster-dev).
 // 실배포: songtudy.github.io/reserve/   테스트: songtudy.github.io/reserve-dev/
 // localhost·파일·미리보기·폴더 복사본·남의 fork = 전부 dev. 실명단을 건드리지 않는다.
@@ -1031,6 +1193,11 @@ const itemsRef = ds => ref(db, ROOT + '/' + ds + '/items');
 // 서버 시계를 따르게. 서버 시계는 구글 인프라(NTP)라 실제 시각과 사실상 일치한다.
 let __skewMs = 0, __skewKnown = false;
 onValue(ref(db, '.info/serverTimeOffset'), s => { __skewMs = Number(s.val()) || 0; __skewKnown = true; });
+
+// 공유 로그인 계정 — 이메일은 앱에 고정, 비밀번호만 직원이 입력한다.
+// (실제로 메일이 오가지 않는 주소. 비번 재설정은 Firebase 콘솔에서만 가능.)
+const STAFF_EMAIL = 'staff@iksuni.app';
+const auth = getAuth(app);
 
 window.__fb = {
   serverSkew: () => __skewMs,
@@ -1088,7 +1255,17 @@ window.__fb = {
   // Firebase가 알려주는 실제 연결 상태
   onConnected: cb => onValue(ref(db, '.info/connected'), s => cb(s.val() === true)),
   // 연결이 죽었을 때 소켓을 끊었다 다시 붙인다
-  reconnect: () => { try { goOffline(db); } catch(e){} setTimeout(() => { try { goOnline(db); } catch(e){} }, 150); }
+  reconnect: () => { try { goOffline(db); } catch(e){} setTimeout(() => { try { goOnline(db); } catch(e){} }, 150); },
+
+  // ---- 공유 비밀번호 로그인 ----
+  // 직원 전원이 계정 하나를 함께 쓴다. 이메일은 여기 고정하고 직원은 비밀번호만 친다.
+  // 세션은 기기에 저장(browserLocalPersistence)되므로 기기당 한 번만 입력하면 되고,
+  // 다음부터는 오프라인으로 켜도 로그인 상태가 복원된다.
+  authWatch: cb => onAuthStateChanged(auth, u => cb(!!u)),
+  signIn: pw => setPersistence(auth, browserLocalPersistence)
+                  .catch(() => {})                       // 저장 실패해도 로그인은 시도
+                  .then(() => signInWithEmailAndPassword(auth, STAFF_EMAIL, pw)),
+  signOut: () => signOut(auth)
 };
 window.dispatchEvent(new Event('fb-ready'));
 </script>
@@ -2393,7 +2570,7 @@ window.dispatchEvent(new Event('fb-ready'));
     }
   }
   function warnLogPersistence(){
-    setTimeout(function(){ toast('변경 내역 저장 실패'); }, 0);
+    setTimeout(function(){ toast('변경 내역 저장 실패 — 다시 시도합니다'); }, 0);
   }
   function scheduleLogRetry(){
     if (logRetryTimer || !Object.keys(logOutbox).length || document.hidden || !online
@@ -2506,7 +2683,7 @@ window.dispatchEvent(new Event('fb-ready'));
     }
     function failed(){
       if (serial === logWatchSerial && !sheetScrim.classList.contains('hide')){
-        toast('동기화 실패 — 연결되면 자동 재시도');
+        toast('동기화 실패 — 연결되면 다시 시도합니다');
       }
     }
     if (api.logWatch){
@@ -2653,8 +2830,8 @@ window.dispatchEvent(new Event('fb-ready'));
 
   /* ---------- 명단 등록 ---------- */
   var pasteHint = document.getElementById('pasteHint');
-  var HINT_OK = '양식에 맞게 붙여넣어 주세요.';
-  var HINT_BAD = '표시된 줄을 양식에 맞게 고쳐 주세요.';
+  var HINT_OK  = '양식에 맞게 붙여넣어 주세요';
+  var HINT_BAD = '표시된 줄을 양식에 맞게 고쳐 주세요';
   var hl = document.getElementById('hl');
   var taEl = document.getElementById('ta');
   var marking = false;   // 오류 표시 중인지
@@ -2784,9 +2961,39 @@ window.dispatchEvent(new Event('fb-ready'));
   /* ---------- UI 연결 ---------- */
   var panel = document.getElementById('pastePanel');
   var panelScrim = document.getElementById('panelScrim');
+  // 예약 추가 막을 탭했을 때: 키보드가 떠 있었으면 「키보드 닫기」로만 쓰고 창은 안 닫는다.
+  // 한 번의 헛터치로 쓰던 내용이 날아가지 않게 — 창을 닫으려면 키보드 내려간 뒤 한 번 더
+  // 누르거나 「취소」. 키보드 여부는 touchstart 에서 미리 잡는다: iOS 는 click 이 오기 전에
+  // 이미 입력칸을 blur 시켜 키보드를 내리므로, click 시점의 activeElement 로는 판별 못 한다.
+  var scrimTapHadKb = false;
+  panelScrim.addEventListener('touchstart', function(){
+    scrimTapHadKb = document.body.classList.contains('keyboard-open');
+  }, { passive: true });
   panelScrim.addEventListener('click', function(){
-    if (!document.getElementById('addPanel').classList.contains('hide')) closeAdd();
+    var ap = document.getElementById('addPanel');
+    if (ap.classList.contains('hide')) return;
+    var hadKb = scrimTapHadKb || document.body.classList.contains('keyboard-open');
+    scrimTapHadKb = false;
+    if (hadKb) return;                 // 이 탭은 키보드만 내렸다 — 창은 그대로
+    // 데스크톱 등 포커스가 유지되는 환경: 입력칸이 아직 살아 있으면 그것부터 푼다
+    var a = document.activeElement;
+    if (a && ap.contains(a) && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')){ a.blur(); return; }
+    closeAdd();
   });
+  // 예약 추가 창이 떠 있는 동안 손가락 끌기를 막는다.
+  //   아이폰은 키보드가 올라와 있으면 「화면 자체」를 위아래로 끌 수 있게 해 준다.
+  //   이건 페이지 스크롤이 아니라 브라우저가 자기 창을 옮기는 것이라 overflow 로는 안 막힌다.
+  //   남은 수단은 touchmove 를 직접 취소하는 것뿐이다(passive:false 여야 취소된다).
+  //   단, 창 안에 진짜로 스크롤돼야 하는 칸이 있으면 그건 살려 둔다.
+  document.addEventListener('touchmove', function(e){
+    var ap = document.getElementById('addPanel');
+    if (!ap || ap.classList.contains('hide')) return;
+    for (var n = e.target; n && n !== document.body; n = n.parentElement){
+      var oy = getComputedStyle(n).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight + 1) return;
+    }
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
   // 명단이 비었을 때의 전체 화면 폼. 한 건 추가는 「예약 추가」 폼이 맡는다.
   function openPaste(silent){
     if (discardEditing()) render();
@@ -2863,7 +3070,7 @@ window.dispatchEvent(new Event('fb-ready'));
     };
     state.items.push(item);
     state.items.sort(sortItems);
-    logAdd('예약 추가', time + ' ' + name + ' ' + pax + '명');
+    logAdd('추가', time + ' ' + name + ' ' + pax + '명');
     delete collapsed[time];        // 방금 넣은 예약은 보이게
     closeAdd();
     render();
@@ -2939,7 +3146,8 @@ window.dispatchEvent(new Event('fb-ready'));
     vv.addEventListener('scroll', applyViewport);
   }
   window.addEventListener('resize', applyViewport);
-  window.addEventListener('orientationchange', function(){ setTimeout(applyViewport, 250); });
+  // 회전도 키보드 전환처럼 뷰포트 갱신이 늦을 수 있다 — 같은 사다리(40·140·320·600ms)로 잰다.
+  window.addEventListener('orientationchange', function(){ remeasureViewport(); });
   // 키보드가 뜨고 내려갈 때 visualViewport 갱신이 아이폰 앱 모드에서 늦거나 빠질 수 있어
   // 포커스 전환 직후 몇 번 더 강제로 잰다. applyViewport 는 여러 번 불러도 무해하다.
   function remeasureViewport(){ [40, 140, 320, 600].forEach(function(t){ setTimeout(applyViewport, t); }); }
@@ -2950,13 +3158,19 @@ window.dispatchEvent(new Event('fb-ready'));
   applyViewport();
 
   /* ---------- 뒤로가기 ---------- */
-  // 앱 모드에서는 뒤로가기를 누르면 앱이 그대로 꺼진다.
-  // 서랍·시트·팝업이 열려 있으면 그것부터 닫는다. (아이폰의 화면 끝 쓸기도 같다)
+  // 안드로이드는 뒤로가기 버튼을 누르면 앱이 그대로 꺼진다. 그래서 서랍·시트·팝업을 열 때
+  // 가짜 방문 기록을 하나 심어, 그 버튼이 앱을 끄는 대신 열린 것부터 닫게 만든다.
+  //
+  // 아이폰에는 그 버튼이 없다. 대신 화면 끝 쓸기가 있는데, 기록이 있으면 iOS 가
+  // 「이전 페이지로 가는 전환」을 그려서 앱 전체가 오른쪽으로 밀리는 것처럼 보인다.
+  // 그래서 아이폰에서는 기록을 심지 않는다 — 돌아갈 데가 없으니 쓸어도 아무 일이 없다.
+  // 닫는 길은 이미 다 있다: 서랍은 왼쪽으로 끌기, 팝업은 취소 버튼과 막 바깥 탭.
+  var HAS_BACK_KEY = /Android/i.test(navigator.userAgent || '');
   var backClose = null;
   function backOpen(fn){
     if (backClose){ backClose = fn; return; }   // 서랍 → 시트처럼 갈아탈 땐 기록을 늘리지 않는다
     backClose = fn;
-    try { history.pushState({ ov: 1 }, ''); } catch(e){}
+    if (HAS_BACK_KEY){ try { history.pushState({ ov: 1 }, ''); } catch(e){} }
   }
   function backDone(){                           // 화면에서 직접 닫았을 때
     if (!backClose) return;
@@ -2970,36 +3184,78 @@ window.dispatchEvent(new Event('fb-ready'));
   });
 
   var scrim = document.getElementById('scrim');
-  function confirmDlg(title, onYes, yesLabel){
-    var yes = document.getElementById('dlgYes');
-    var no  = document.getElementById('dlgNo');
-    var inp = document.getElementById('dlgInput');
+  // 길게 눌러 확인하는 팝업. 입력칸(키보드)이 없다 — 한 번의 탭·주머니 오작동으로는 실행되지
+  // 않고, HOLD_MS 동안 「초기화」를 누르고 있어야 완성된다. 누르다 손을 떼거나 버튼 밖으로
+  // 밀면 처음으로 돌아간다.
+  var HOLD_MS = 1000;   // CSS 의 --holdms 와 반드시 같은 값
+  // opts.hold: true 면 「길게 눌러」 실행(초기화 — 8/31 실수 방지). 아니면 평범한 탭(로그아웃 등).
+  // 두 방식 모두 같은 창(#scrim/.dialog)·같은 취소/실행 배치를 쓴다 — 상호작용만 다르다.
+  function confirmDlg(title, onYes, opts){
+    opts = opts || {};
+    var yes  = document.getElementById('dlgYes');
+    var no   = document.getElementById('dlgNo');
+    var note = document.getElementById('dlgNote');
+    var hold = !!opts.hold;
     document.getElementById('dlgTitle').textContent = title;
-    yes.textContent = yesLabel || '확인';
-    inp.value = '';
-    yes.disabled = true;
+    yes.querySelector('.ht').textContent = opts.yes || '확인';
+    note.textContent = opts.note || '';
+    note.classList.toggle('hide', !opts.note);
+    yes.classList.toggle('holdmode', hold);
     scrim.classList.remove('hide');
-    // 자동 포커스 안 함 — iOS 는 키보드를 안 올려서 커서만 깜빡일 뿐. 칸을 직접 누르면 입력.
 
-    function ok(){ return inp.value.trim() === '예'; }
+    var timer = null;
+    function stop(){                          // 손을 떼거나 버튼 밖으로 나가면 처음으로
+      if (timer){ clearTimeout(timer); timer = null; }
+      yes.classList.remove('hold');
+    }
+    function fire(){
+      if (hold){ try { navigator.vibrate && navigator.vibrate(15); } catch(e){} }
+      done(); onYes();
+    }
     function hide(){
+      stop();
       scrim.classList.add('hide');
-      yes.onclick = null; no.onclick = null; scrim.onclick = null;
-      inp.oninput = null; inp.onkeydown = null;
+      no.onclick = scrim.onclick = yes.onclick = null;
+      yes.onpointerdown = yes.onpointermove = yes.onpointerup = null;
+      yes.onpointercancel = yes.oncontextmenu = yes.onkeydown = yes.onkeyup = null;
     }
     function done(){ hide(); backDone(); }
     backOpen(hide);
-    inp.oninput = function(){ yes.disabled = !ok(); };
-    inp.onkeydown = function(e){ if (e.key === 'Enter' && ok()){ done(); onYes(); } };
-    yes.onclick = function(){ if (ok()){ done(); onYes(); } };
+
+    if (hold){
+      var begin = function(){
+        stop();
+        yes.classList.add('hold');
+        timer = setTimeout(function(){ timer = null; fire(); }, HOLD_MS);
+      };
+      yes.onpointerdown = function(e){ if (!e.button) begin(); };
+      yes.onpointermove = function(e){        // 누른 채 버튼 밖으로 밀면 취소 — 빠져나갈 길
+        if (!timer) return;
+        var r = yes.getBoundingClientRect();
+        if (e.clientX < r.left || e.clientX > r.right ||
+            e.clientY < r.top  || e.clientY > r.bottom) stop();
+      };
+      yes.onpointerup = yes.onpointercancel = stop;
+      yes.oncontextmenu = function(e){ e.preventDefault(); };   // 길게 누를 때 뜨는 iOS 메뉴 차단
+      yes.onkeydown = function(e){                              // 키보드(데스크톱 검증용)
+        if ((e.key === ' ' || e.key === 'Enter') && !timer && !e.repeat){ e.preventDefault(); begin(); }
+      };
+      yes.onkeyup = function(e){ if (e.key === ' ' || e.key === 'Enter') stop(); };
+    } else {
+      yes.onclick = fire;
+    }
     no.onclick  = done;
     scrim.onclick = function(e){ if (e.target === scrim) done(); };
   }
 
   document.getElementById('resetBtn').addEventListener('click', function(){
     if (!state || !state.items.length){ toast('명단이 없습니다'); return; }
-    confirmDlg('오늘 명단을 초기화할까요?\n「예」를 입력해 주세요', function(){
-      logAdd('명단 초기화', state.items.length + '건 지움');
+    // 안내문은 조작법 하나만 — 앱의 다른 창 보조문(#pasteHint·.rltsub)과 같은 규칙이다.
+    // 건수는 묻는 자리(안내문)가 아니라 끝난 자리(토스트)에 둔다: 「명단 초기화」를 누른
+    // 사람에게 건수는 결정을 바꾸지 않지만, 끝난 뒤엔 무엇이 사라졌는지 알려 주는 영수증이 된다.
+    confirmDlg('오늘 명단을 초기화할까요?', function(){
+      var n = state.items.length;                 // 비우기 전에 세어 둔다
+      logAdd('명단 초기화', n + '건 지움');
       editing = null; openMenu = null;
       deferredState = null; backgroundRenderPending = false;
       state = { date: viewDate, items: [] };
@@ -3008,8 +3264,10 @@ window.dispatchEvent(new Event('fb-ready'));
       if (wrapEl) wrapEl.scrollTop = 0;
       render();
       replaceItems([]);   // items 노드 삭제
-
-    }, '초기화');
+      // 한 건 지워도 「…삭제됨」을 띄우면서 전부 지울 땐 아무 말이 없었다.
+      // 「명단 등록됨 · N건」과 짝이 되는 문구 — 같은 주어(명단)·같은 「· 건수」 꼴.
+      toast('명단 초기화됨 · ' + n + '건');
+    }, { yes: '초기화', note: '「초기화」를 길게 눌러 주세요', hold: true });
   });
 
   document.getElementById('loadBtn').addEventListener('click', function(){
@@ -3347,7 +3605,7 @@ window.dispatchEvent(new Event('fb-ready'));
     function spin(){
       if (spinning) return;
       var ns = names();
-      if (ns.length < 2){ say('이름을 2명 이상 넣어 주세요', true); return; }
+      if (ns.length < 2){ say('이름을 2명 이상 입력해 주세요', true); return; }
       spinning = true;
       inp.blur();                     // 키보드 내려 칩 안 가리게
       inp.disabled = true;            // 스핀 중 이름·키보드 못 건드리게
@@ -3472,21 +3730,21 @@ window.dispatchEvent(new Event('fb-ready'));
       '예약 시각 15분 뒤까지 방문 체크가 없으면 자동으로 취소됩니다.\n'
       + '늦게 와도 체크하면 방문으로 바뀝니다.'],
     ['상단 시간은 언제 바뀌나요?',
-      '정각 예약은 11분 뒤, 그 외 예약은 예약 시각이 되면 다음 시간대로 넘어갑니다.\n'
-      + '또는 해당 시간대 예약을 모두 처리하면 바로 넘어갑니다.'],
+      '정각 예약은 11분 뒤, 그 외는 예약 시각이 되면 다음 시간대로 넘어갑니다.\n'
+      + '또는 그 시간대 예약을 모두 처리하면 바로 넘어갑니다.'],
     ['시간대는 왜 자동으로 접히나요?',
       '남은 예약이 없으면 5초 뒤 자동으로 접힙니다.'],
     ['메모는 어떻게 쓰나요?',
-      '예약 <em>수정</em>에서 입력할 수 있으며 이름 아래에 표시됩니다.\n'
-      + '메모는 명단 복사에는 포함되지 않습니다.'],
+      '예약 <em>수정</em>에서 입력하면 이름 아래에 표시됩니다.\n'
+      + '메모는 명단 복사에 포함되지 않습니다.'],
     ['연결이 끊기면?',
       '화면에 <em>연결 안 됨</em>이 표시됩니다.\n'
-      + '개별 예약 변경은 기기에 저장됐다가 다시 연결되면 반영됩니다.'],
+      + '개별 예약 변경은 기기에 저장되고, 다시 연결되면 반영됩니다.'],
     ['명단이 사라지면?',
       '메뉴 → <em>지난 명단</em>에서 원하는 시점의 명단을 복사해 다시 등록하면 됩니다.'],
     ['업데이트 알림이 뜨면?',
-      '<em>업데이트</em> 버튼을 누르거나, 앱을 완전히 종료한 뒤 다시 실행하면 업데이트가 적용됩니다.\n'
-      + '당장 업데이트하지 않아도 문제없습니다.']
+      '<em>업데이트</em> 버튼을 누르거나, 앱을 완전히 종료했다가 다시 열면 적용됩니다.\n'
+      + '당장 하지 않아도 괜찮습니다.']
   ];
   var CHEV = '<span class="qchev"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5 L16 12 L9 19"/></svg></span>';
 
@@ -3543,7 +3801,7 @@ window.dispatchEvent(new Event('fb-ready'));
       ]);
   }
   var INSTALL_NOTE = '<p class="sheetNote">'
-    + '「익순이」는 홈 화면 앱에 최적화되어 있습니다.</p>';
+    + '「익순이」는 홈 화면에 설치해 쓰는 앱입니다.</p>';
 
   // 이 앱의 주소. 실사용이면 /reserve/, 테스트면 /reserve-dev/ 가 저절로 나온다.
   // 앱으로 설치하면 주소창이 없어 주소를 꺼낼 데가 없다 — 다른 폰에 깔거나,
@@ -3569,6 +3827,19 @@ window.dispatchEvent(new Event('fb-ready'));
   document.getElementById('installBtn').addEventListener('click', function(){
     hideDrawer();
     openInstallSheet();
+  });
+
+  // 로그아웃 — 세션만 지운다. 잠금화면의 authWatch 가 이를 감지해 키패드를 띄우고,
+  // 다시 로그인하면 화면을 새로 불러 깨끗한 상태로 돌아간다.
+  document.getElementById('logoutBtn').addEventListener('click', function(){
+    hideDrawer();
+    // 보조문 = 결과 안내. 초기화 창의 조작 안내와 종류는 다르지만(그쪽은 「어떻게」, 이쪽은 「무슨 일이」),
+    // 제목만 덜렁 있으면 허전하고 이 앱의 로그아웃이 뭘 하는지(이 기기만·명단 유지)가 안 자명하다.
+    confirmDlg('로그아웃할까요?', function(){
+      if (window.__fb && window.__fb.signOut) window.__fb.signOut();
+      // 나머지는 잠금화면 authWatch 가 처리한다: signOut → 키패드,
+      // 재로그인 → boot() 을 다시 돌려 새 명단으로 잠금만 부드럽게 걷어낸다 (새로고침 없음).
+    }, { yes: '로그아웃', note: '비밀번호를 다시 입력해야 합니다' });
   });
 
   /* ---------- Wi-Fi 안내 ---------- */
@@ -3681,8 +3952,10 @@ window.dispatchEvent(new Event('fb-ready'));
     sheetBtnsReset();   // 상세에서 끼운 「명단 복사」 제거
     bkRenderList();
     backClose = hideSheet;
-    // 하드웨어 뒤로가기(popstate)로 불려왔으면 history 항목이 소비됐으니 다시 심는다
-    if (!(history.state && history.state.ov)){ try { history.pushState({ ov: 1 }, ''); } catch(e){} }
+    // 안드로이드: 하드웨어 뒤로가기(popstate)로 불려왔으면 history 항목이 소비됐으니 다시 심는다.
+    // 아이폰은 backOpen 과 마찬가지로 항목을 심지 않는다 (심으면 화면 끝 쓸기가 「이전 페이지」
+    // 전환을 그려 앱 전체가 밀리는 것처럼 보인다 — HAS_BACK_KEY 설명 참고).
+    if (HAS_BACK_KEY && !(history.state && history.state.ov)){ try { history.pushState({ ov: 1 }, ''); } catch(e){} }
   }
   // 「지난 명단」 = 어제 하나만 보여준다. (DB 엔 정리 여유로 며칠 더 남지만 화면엔 어제만)
   function loadPastRosters(){
@@ -3744,8 +4017,8 @@ window.dispatchEvent(new Event('fb-ready'));
     openSheet('익순이란?',
       '<p class="about"><b>익선취향 예약 명단을 실시간으로 확인하고 관리하는 앱입니다.</b></p>'
       + '<p class="about">바뀐 내용은 <b>1초 안에 모든 기기에 반영</b>됩니다.</p>'
-      + '<p class="about">명단을 복사하면 <b>단톡방에 올라오는 양식 그대로</b> 복사됩니다.</p>'
-      + '<p class="credit">익순이 v1.6.3<br>© 2026 Jumin Labs</p>');
+      + '<p class="about">명단을 복사하면 <b>단톡방 양식 그대로</b> 나옵니다.</p>'
+      + '<p class="credit">익순이 v1.7.0<br>© 2026 Jumin Labs</p>');
   });
 
   // 브라우저로 처음 들어온 사람에게 한 번 권한다
@@ -3754,7 +4027,8 @@ window.dispatchEvent(new Event('fb-ready'));
     try { return localStorage.getItem(HINT_KEY) === '1'; } catch(e){ return true; }
   }
   function maybeInstallHint(){
-    if (isStandalone() || hintOff()) return;
+    if (maybeInstallHint._done || isStandalone() || hintOff()) return;
+    maybeInstallHint._done = true;   // 잠금화면과 boot 양쪽에서 부르므로 여기서 한 번만 막는다
     setTimeout(function(){
       // 다른 안내·서랍·팝업이 떠 있으면 그 위에 겹쳐 띄우지 않는다 (이번엔 건너뛴다)
       var blocked = ['sheetScrim', 'scrim', 'rltScrim', 'panelScrim'].some(function(id){
@@ -3781,19 +4055,19 @@ window.dispatchEvent(new Event('fb-ready'));
     return false;
   }
   function reloadPage(){
-    if (typingNow()){ toast('입력 중 — 새로고침 건너뜀'); return; }
+    if (typingNow()){ toast('입력 중 — 새로고침을 건너뜁니다'); return; }
     try { window.location.reload(); } catch(e){}
   }
 
+  function doUpdate(){
+    if (typingNow()){ toast('입력을 마치고 눌러 주세요'); return; }
+    try { sessionStorage.setItem('ix-updated', '1'); } catch(e){}   // 새로 뜬 뒤 확인 토스트용
+    try { window.location.reload(); } catch(e){}
+  }
   var refreshBtn = document.getElementById('refreshBtn');
   refreshBtn.addEventListener('click', function(){
     // 새 버전이 감지된 상태면 이 버튼은 「업데이트」 — 눌러서 새로 불러온다.
-    if (updShown){
-      if (typingNow()){ toast('입력을 마치고 눌러 주세요'); return; }
-      try { sessionStorage.setItem('ix-updated', '1'); } catch(e){}   // 새로 뜬 뒤 확인 토스트용
-      try { window.location.reload(); } catch(e){}
-      return;
-    }
+    if (updShown){ doUpdate(); return; }
     // 연결이 끊긴 상태면 데이터를 다시 읽어봐야 소용없다. 연결 자체를 되살린다.
     if (!online && hasStore() && fb().reconnect){
       toast('다시 연결 중…');
@@ -3828,7 +4102,7 @@ window.dispatchEvent(new Event('fb-ready'));
   }
 
   function copyText(txt, okMsg){
-    if (!txt){ toast('내용이 없습니다'); return; }
+    if (!txt){ toast('명단이 없습니다'); return; }
     var done = function(){ toast(okMsg); };
     if (navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(txt).then(done).catch(function(){ fallbackCopy(txt, done); });
@@ -3862,6 +4136,7 @@ window.dispatchEvent(new Event('fb-ready'));
   }
 
   /* ---------- 시작 ---------- */
+  var BOOT_WAIT = 8000;   // boot() 의 첫 명단 읽기 제한 시간 (아래 설명)
   function boot(){
     if (hasStore() && fb().onConnected && !boot._watched){
       boot._watched = true;
@@ -3876,15 +4151,25 @@ window.dispatchEvent(new Event('fb-ready'));
     wqWake();
     var ticket = loadTicket();
     if (!hasStore()){ stageBackgroundState(state || { date: ticket.date, items: [] }); return; }
-    fb().itemsGet(ticket.date).then(function(res){
+    // 첫 명단 읽기에 시간 제한을 둔다. 아이폰이 백그라운드에서 오래 얼렸다 깨우면 Firebase
+    // 소켓과 그 내부 타이머까지 멈춰 있다가 엉켜, get() 이 응답도 거부도 없이 영영 매달릴 수
+    // 있다 (→ 백지 화면). 그 경우 BOOT_WAIT 뒤 캐시/빈 명단으로 화면부터 띄우고 소켓을
+    // 되살린다. 실시간 수신(watchRemote)이 붙으면 곧 실제 데이터로 채워진다.
+    var got = fb().itemsGet(ticket.date);
+    got.catch(function(){});   // 시간 초과 뒤 뒤늦게 거부돼도 「미처리 거부」 경고가 안 뜨게
+    Promise.race([
+      got,
+      new Promise(function(_, rej){ setTimeout(rej, BOOT_WAIT, new Error('boot timeout')); })
+    ]).then(function(res){
       if (!ticketCurrent(ticket)) return;
       stageBackgroundState(itemsToState(ticket.date, res));
       watchRemote();   // 즉시 fire → applyRemoteItems 가 필요시 구 형식 변환도 한다
-      if (!boot._hinted){ boot._hinted = true; maybeInstallHint(); }
+      maybeInstallHint();   // 중복 방지는 maybeInstallHint 안에서 한다
     }).catch(function(){
       if (!ticketCurrent(ticket)) return;
       stageBackgroundState(state || { date: ticket.date, items: [] });
       watchRemote();
+      if (hasStore() && fb().reconnect) fb().reconnect();
     });
   }
 
@@ -3923,7 +4208,7 @@ window.dispatchEvent(new Event('fb-ready'));
   try {
     if (sessionStorage.getItem('ix-updated')){
       sessionStorage.removeItem('ix-updated');
-      setTimeout(function(){ toast('최신 버전으로 업데이트되었어요'); }, 700);
+      setTimeout(function(){ toast('업데이트되었습니다'); }, 700);
     }
   } catch(e){}
 
@@ -3952,7 +4237,7 @@ window.dispatchEvent(new Event('fb-ready'));
     // 알림 띠를 띄운다. 명단이 없어도(붙여넣기 화면) 확인한다.
     // 연결이 늦게 붙는 경우가 있어 한 번 더.
     checkUpdate();
-    setTimeout(checkUpdate, 4000);
+    setTimeout(checkUpdate, 3000);   // 재연결 사다리 첫 칸과 같은 간격
     // 화면 높이가 달라졌을 수 있다 (키보드가 열린 채 복귀했을 수도).
     // applyViewport 가 현재 visualViewport 로 --kb 와 keyboard-open 을 다시 잡는다.
     // iOS 복귀 애니메이션 동안 높이 보고가 흔들려서, 한 번이 아니라 여러 번 잰다
@@ -3962,13 +4247,18 @@ window.dispatchEvent(new Event('fb-ready'));
     // 백그라운드에 있는 동안 날짜가 넘어갔을 수 있다.
     // 먼저 확인하지 않으면 어제 명단을 「오늘」로 띄운 채 체크하게 된다.
     if (rolloverIfNeeded()) return;
-    if (!state) return;
+    // 얼었다 깨어나 첫 명단조차 못 받은 채였다면(state 없음) 처음부터 다시 부른다.
+    // boot() 은 BOOT_WAIT 제한이 있어 소켓이 죽어 있어도 곧 캐시로 화면을 띄운다.
+    if (!state){ boot(); return; }
     sync();          // 즉시 최신 상태 확인
     watchRemote();   // 백그라운드에서 끊겼을 수 있으니 실시간 수신도 다시 건다
-    // 3초 안에 연결이 안 돌아오면 소켓을 강제로 다시 붙인다
-    setTimeout(function(){
-      if (!online && hasStore() && fb().reconnect){ fb().reconnect(); watchRemote(); }
-    }, 3000);
+    // 복귀 직후엔 소켓이 죽어 있는 게 흔하다. 3초 뒤 아직 안 붙어 있으면 강제로 다시 붙이고,
+    // 그래도 안 되면 한 번 더(8초) — 첫 reconnect 도 얼어붙은 상태에서 못 나갈 수 있다.
+    [3000, 8000].forEach(function(t){
+      setTimeout(function(){
+        if (!online && hasStore() && fb().reconnect){ fb().reconnect(); watchRemote(); sync(); }
+      }, t);
+    });
   });
 
   // 영업일이 바뀌었으면 오늘로 옮겨가고 명단을 다시 불러온다.
@@ -4072,11 +4362,173 @@ window.dispatchEvent(new Event('fb-ready'));
     paintHead();
   }, 5000);
 
+  /* ---------- 잠금 화면 (공유 비밀번호) ----------
+     기본은 '잠김'. 로그인 상태가 확인돼야 잠금이 풀리고 boot() 이 돈다.
+     세션은 기기에 저장되므로 기기당 한 번만 입력하면 되고, 그 뒤엔 오프라인으로 켜도 통과한다.
+     ※ 실제 보안은 Firebase 규칙이 담당한다 — 이 화면은 그 앞의 문일 뿐.
+     ※ 실사용에 배포할 땐 순서 주의: 앱을 먼저 올리고 매장 폰들을 로그인시킨 뒤에 규칙을 조인다.
+        (규칙을 먼저 조이면 잠금 화면 없는 구버전 앱이 명단을 못 읽는다.) */
+  var lockEl   = document.getElementById('lock');
+  var lockDots = document.getElementById('lockDots');
+  var lockMsg  = document.getElementById('lockMsg');
+  var lockDel  = document.getElementById('lockDel');
+  var booted   = false;
+  var PIN_LEN  = 6;          // 비밀번호 자릿수. 길이를 바꾸면 여기만 고치면 된다.
+  var pin      = '';
+
+  for (var i = 0; i < PIN_LEN; i++) lockDots.appendChild(document.createElement('i'));
+  var dots = lockDots.children;
+
+  function paintPin(){
+    for (var i = 0; i < PIN_LEN; i++) dots[i].classList.toggle('on', i < pin.length);
+    lockDel.disabled = pin.length === 0;
+  }
+  function clearPin(){ pin = ''; paintPin(); }
+
+  function unlock(){
+    try { localStorage.setItem('ix-authed', '1'); } catch(e){}
+    // boot() 을 먼저 돌린다 — 페이드가 도는 .2s 동안 명단을 받아와 빈 화면을 안 보여준다.
+    // try 로 감싸는 이유: boot() 이 던지면 아래 걷어내기가 실행되지 않아 잠금에 갇힌다.
+    if (!booted){ booted = true; try { boot(); } catch(e){} }
+    lockEl.classList.add('out');
+    setTimeout(function(){
+      lockEl.classList.add('hide');
+      lockEl.classList.remove('out');
+      // data-authed 는 맨 마지막에 — 먼저 걸면 CSS 가 즉시 display:none 으로 만들어 페이드가 죽는다
+      document.documentElement.setAttribute('data-authed', '1');
+    }, 210);
+  }
+  function lockShow(msg){
+    try { localStorage.removeItem('ix-authed'); } catch(e){}
+    document.documentElement.removeAttribute('data-authed');   // 표식을 지워야 잠금이 실제로 보인다
+    clearPin();                          // 키패드는 늘 빈 상태로 나타난다 (finish 는 성공 시 안 비우므로 여기서)
+    lockEl.classList.remove('hide', 'out', 'busy', 'checking', 'bad');
+    lockMsg.textContent = msg || '';
+  }
+  function lockFail(msg){
+    lockMsg.textContent = msg;
+    lockEl.classList.remove('bad');
+    void lockEl.offsetWidth;              // 애니메이션 재시작
+    lockEl.classList.add('bad');
+    clearPin();
+  }
+
+  function submitPin(){
+    lockEl.classList.add('busy');           // 키패드 즉시 잠금
+    lockMsg.textContent = '';
+    var settled = false, timer = null;
+    // 「검사 중」 맥동은 마지막 점이 채워지는 전환(.12s)이 끝난 뒤에 건다.
+    // 전환과 맥동이 겹치면 그 점 하나만 따로 깜빡이는 것처럼 보인다.
+    var pulseT = setTimeout(function(){ if (!settled) lockEl.classList.add('checking'); }, 140);
+    function finish(msg){
+      if (settled) return;                 // 응답과 시한이 겹쳐도 한 번만
+      settled = true;
+      clearTimeout(timer); clearTimeout(pulseT);
+      lockEl.classList.remove('busy', 'checking');
+      // 성공이면 점을 비우지 않는다 — 채워진 채로 unlock() 의 페이드에 녹아 사라진다 (아이폰 방식).
+      // 따로 비우면 전환이 시작되는 그 순간과 겹쳐 어차피 안 보이고, 어정쩡하게만 남는다.
+      if (msg) lockFail(msg);              // 실패는 lockFail 안에서 흔들고 clearPin 한다
+    }
+    // 응답이 영영 안 오면(매장 와이파이가 끊기는 등) 키패드가 잠긴 채 갇힌다.
+    // 앱을 강제 종료하는 것 말고 빠져나갈 길이 없으므로 시한을 둔다.
+    timer = setTimeout(function(){ finish('연결을 확인해 주세요'); }, 12000);
+    window.__fb.signIn(pin).then(function(){
+      finish(null);
+    }).catch(function(err){
+      var c = (err && err.code) || '';
+      finish(c === 'auth/network-request-failed' ? '연결을 확인해 주세요'
+           : c === 'auth/too-many-requests'      ? '잠시 뒤 다시 시도해 주세요'
+           : '비밀번호가 맞지 않습니다');
+    });
+  }
+  // busy(확인 중) / out(잠금 걷히는 중)에는 입력을 받지 않는다 —
+  // 화면 탭은 .lock.out{pointer-events:none} 이 막지만 물리 키보드는 여기서 막는다.
+  function pinLocked(){ return lockEl.classList.contains('busy') || lockEl.classList.contains('out'); }
+  function pinPush(d){
+    if (pinLocked() || pin.length >= PIN_LEN) return;
+    lockEl.classList.remove('bad');
+    lockMsg.textContent = '';
+    pin += d;
+    paintPin();
+    if (pin.length === PIN_LEN) submitPin();   // 다 채우면 바로 확인 — 별도 버튼 없음
+  }
+  function pinPop(){
+    if (pinLocked() || !pin) return;
+    pin = pin.slice(0, -1);
+    paintPin();
+  }
+
+  // 눌린 표시를 최소 130ms 유지한다 — 손가락이 스치듯 닿으면 :active 가 너무 짧아 안 보인다
+  (function(){
+    var pad = document.getElementById('lockPad');
+    var dnTimer = null, dnKey = null;
+    function press(b){
+      if (!b || b.classList.contains('blank') || b.disabled) return;
+      if (dnTimer){ clearTimeout(dnTimer); if (dnKey) dnKey.classList.remove('dn'); }
+      b.classList.add('dn'); dnKey = b;
+      dnTimer = setTimeout(function(){
+        b.classList.remove('dn'); dnTimer = null; dnKey = null;
+      }, 130);
+    }
+    pad.addEventListener('pointerdown', function(e){
+      var b = e.target.closest && e.target.closest('.lockkey');
+      press(b);
+    });
+  })();
+
+  document.getElementById('lockPad').addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('.lockkey');
+    if (!b) return;
+    if (b === lockDel) pinPop();
+    else if (b.dataset.d != null) pinPush(b.dataset.d);
+  });
+  // 물리 키보드(맥·블루투스)로도 칠 수 있게 — 잠겨 있을 때만 듣는다
+  document.addEventListener('keydown', function(e){
+    // .hide 만 보면 안 된다 — 재실행 기기는 html[data-authed] CSS 로 숨겨져 있고
+    // .hide 는 authWatch 응답 뒤에야 붙는다. 실제로 그려지는지를 기준으로 판단한다.
+    // (offsetParent 는 못 쓴다 — position:fixed 요소는 항상 null 이라 늘 무시돼 버린다.)
+    if (getComputedStyle(lockEl).display === 'none') return;
+    if (e.key >= '0' && e.key <= '9'){ pinPush(e.key); e.preventDefault(); }
+    else if (e.key === 'Backspace'){ pinPop(); e.preventDefault(); }
+  });
+  paintPin();
+
+  // 전에 이 기기에서 로그인했다면 인증 응답(≈370ms)을 기다리지 않고 앱을 먼저 띄운다.
+  // 잠금은 어차피 head 스크립트의 data-authed 로 이미 숨겨져 있고, Firebase SDK 가
+  // 토큰이 준비될 때까지 DB 요청 순서를 알아서 맞춰 준다. 인증이 아니라고 밝혀지면
+  // 아래 authWatch 가 잠금을 되돌리고, 다시 로그인하면 화면을 새로 불러 깨끗이 복구한다.
+  var staleBoot = false;
+  function lockStart(){
+    if (!window.__fb || !window.__fb.authWatch){   // Auth 를 못 불러왔을 때
+      lockShow('앱을 다시 열어 주세요');
+      return;
+    }
+    if (document.documentElement.getAttribute('data-authed') === '1' && !booted){
+      booted = true; boot();
+    }
+    window.__fb.authWatch(function(signedIn){
+      if (signedIn){
+        // 로그아웃했다 다시 로그인한 경우(staleBoot). 페이지를 새로 띄우지 않고,
+        // booted 를 풀어 unlock() 안에서 boot() 이 다시 돌게 한다 — 새 명단을 받아
+        // 잠금만 부드럽게 걷힌다. (예전엔 location.reload() 라 로그인 뒤 잠금화면이 한 번 더 번쩍였다.)
+        if (staleBoot){ staleBoot = false; booted = false; }
+        unlock();
+      } else {
+        if (booted) staleBoot = true;                  // 표식만 믿고 띄웠는데 실제론 로그인 아님
+        lockShow('');
+        // 설치 안내는 「로그인하기 전에」 봐야 한다. 아이폰은 사파리와 홈 화면 앱의 저장소가
+        // 완전히 분리돼 있어서, 사파리에서 먼저 로그인하면 앱을 설치한 뒤 비번을 또 넣어야 한다.
+        // 여기서 권해야 「설치 → 앱에서 한 번만 로그인」 순서가 된다.
+        maybeInstallHint();
+      }
+    });
+  }
+
   // Firebase 모듈이 먼저 준비되면 바로, 아니면 준비 신호를 기다린다
-  if (window.__fb) boot();
+  if (window.__fb) lockStart();
   else {
-    window.addEventListener('fb-ready', boot, { once: true });
-    setTimeout(function(){ if (!state) boot(); }, 300000);  // 로딩 실패 시에도 화면은 뜨게
+    window.addEventListener('fb-ready', lockStart, { once: true });
+    setTimeout(function(){ if (!window.__fb) lockShow('앱을 다시 열어 주세요'); }, 15000);
   }
 })();
 </script>
