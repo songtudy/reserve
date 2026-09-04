@@ -10,6 +10,17 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="익순이">
+
+<!-- 콜드 스타트 단축 — Firebase 모듈 다운로드와 서버 연결을 HTML 파싱 중에 미리 시작한다.
+     (평소엔 문서 끝의 모듈 스크립트까지 파싱이 도달해서야 시작됐다.)
+     로직은 하나도 안 바뀐다. 버전은 아래 import 문과 반드시 같아야 한다. -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://ikseon-reserve-default-rtdb.asia-southeast1.firebasedatabase.app">
+<link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js">
+
 <script>
 // 테마에 딸린 것(속성·색)을 한 번에 바꾼다. 페인트 전 1회 + 서랍에서 바꿀 때(applyTheme)
 // 둘 다 이 함수를 써서 상태가 갈라지지 않게 한다.
@@ -31,12 +42,23 @@ window.setThemeChrome = function(t){
   try { if (localStorage.getItem('theme') === 'light') t = 'light'; } catch(e){}
   window.setThemeChrome(t);
 })();
-// 전에 이 기기에서 로그인했으면 잠금 화면을 아예 그리지 않는다 (앱 열 때마다 번쩍이지 않게).
-// Auth SDK 는 네트워크에서 로드된 뒤에야 로그인 상태를 알려주므로, 그때까지의 공백을 이 표식이 메운다.
+// 전에 이 기기에서 로그인했으면 잠금 화면을 아예 그리지 않는다 (앱 열 때마다 키패드가 번쩍이지 않게).
+// 그 사이(Auth SDK 로드 + 명단 수신, ~1초)는 아래 .splash 스플래시가 화면을 덮는다.
 // 보안이 아니라 깜빡임 방지용 — 실제 차단은 Firebase 규칙이 한다. 표식만 조작해도 명단은 못 읽는다.
 // 로그인이 아닌 것으로 밝혀지면 아래 IIFE 가 이 속성을 지우고 잠금을 띄운다.
 (function(){
   try { if (localStorage.getItem('ix-authed') === '1') document.documentElement.setAttribute('data-authed','1'); } catch(e){}
+})();
+// 홈 화면 앱(standalone)에서는 iOS 가 상태바 높이만큼 웹 영역을 「위에서」 잘라낸다.
+// 그래서 웹 영역의 한가운데는 기기 화면 한가운데보다 그 절반만큼 아래다 (아이폰 17 기준 31pt).
+// 잘린 만큼을 아래 여백으로 돌려주면 스플래시가 실제 화면 한가운데로 온다.
+// 기기에서 읽는 값이라 기종이 달라도 맞는다. 사파리는 아래 툴바까지 빠져 값이 커지므로 제외.
+(function(){
+  try {
+    if (navigator.standalone !== true) return;
+    var cut = Math.round(screen.height - window.innerHeight);
+    if (cut > 0 && cut < 120) document.documentElement.style.setProperty('--sbcut', cut + 'px');
+  } catch(e){}
 })();
 </script>
 <link rel="manifest" href="manifest.json">
@@ -797,7 +819,11 @@ window.setThemeChrome = function(t){
   .lock{transition:opacity .2s ease-out}
   .lock.out{opacity:0;pointer-events:none}
   .lock.hide{display:none}
-  html[data-authed="1"] .lock{display:none}   /* 재실행 시 깜빡임 방지 (위 head 스크립트) */
+  html[data-authed="1"] .lock{display:none}   /* 재실행 시 깜빡임 방지 (위 head 스크립트) — 그 사이는 .splash 가 덮는다 */
+  /* 잠금화면은 스플래시와 일부러 다르게 둔다 — 스플래시는 앱을 열 때 한 번 스치는 브랜드
+     화면이지만, 잠금은 하루에 여러 번 보는 기능 화면(PIN 패드 헤더)이라 다른 시트 제목들과
+     같은 시스템 폰트·굵기를 쓰는 게 실제 UI 와 더 잘 붙는다. 아이콘도 타일(홈 화면 아이콘
+     그대로)을 유지 — "이게 내 폰에 있는 그 앱 맞다"를 확인해주는 자리라 실물 아이콘이 낫다. */
   .lockico{width:56px;height:56px;border-radius:15px;border:1px solid var(--line);background:var(--panel2)}
   .lockname{margin-top:14px;font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--text)}
   .locksub{margin-top:3px;font-size:13px;color:var(--dim)}
@@ -864,6 +890,50 @@ window.setThemeChrome = function(t){
      깜빡이는 것처럼 보인다 (submitPin 참고). reduced-motion 은 아래 전역 규칙이 끈다. */
   .lock.checking .lockdots i.on{animation:lockpulse .9s ease-in-out infinite}
   @keyframes lockpulse{50%{opacity:.3}}
+
+  /* ---------- 스플래시 (앱 로딩) ----------
+     재로그인 상태(data-authed)로 앱을 열면 명단이 뜨기 전 ~1초가 빈다 — 그 사이를 앱 아이콘·이름으로 덮는다.
+     그 상태에선 첫 프레임부터 떠 있고, app IIFE 의 첫 render() 가 .out 로 0.25s 페이드시켜 걷는다
+     (안전망: 12초). 로그인 안 됐으면 잠금 키패드가 그 역할을 하므로 스플래시는 안 띄운다.
+     접속을 빠르게 하지는 않는다 — 빈 화면을 브랜드 화면으로 바꿀 뿐, 고정 지연 없이 준비되면 사라진다. */
+  /* 스플래시 워드마크(익순이) 전용 서체 — 카페24 써라운드(Cafe24 Ssurround), 상업적 임베드 자유
+     (noonnu.cc 배포, Cafe24 자체 라이선스). 로컬에서 fonttools 로 이 세 글자(익·순·이)만 남겨
+     서브셋 — 2KB, 로딩 지연 없음. 스플래시 전용이라 본문 폰트 스택은 안 바뀐다(잠금화면은
+     시스템 폰트 그대로 — 근거는 위 .lockico 주석 참고).
+     font-display:block — 화면에 나타나기 전에(head) 파싱되므로 대체 글꼴이 잠깐 보였다
+     바뀌는 일이 없다. */
+  @font-face{
+    font-family:'IksuniMark';
+    src:url(data:font/woff2;base64,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) format('woff2');
+    font-display:block;
+    unicode-range:U+C21C,U+C774-C775;   /* 순, 익, 이 — 이 서체는 이 세 글자에만 쓰인다 */
+  }
+  .splash{ display:none }
+  html[data-authed="1"] .splash{
+    position:fixed;inset:0;z-index:290;
+    background:var(--ink);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:27px;                    /* 마크 높이(107px)의 0.25배 — 로고 락업의 표준 간격 */
+    padding-bottom:var(--sbcut, 0px);   /* standalone 상태바 보정 (위 head 스크립트). 가운데 락업만
+                                           그 절반만큼 올라간다 — 회사명은 absolute 라 하단 고정 유지 */
+    transition:opacity .25s ease-out;
+  }
+  .splash.out{opacity:0;pointer-events:none}
+  /* 스플래시는 「홈화면 아이콘」이 아니라 마크만 보여준다 (카카오·네이버·KT 등 통용되는 방식).
+     타일·테두리 없음 — 색은 토큰이라 두 테마에서 같은 그림이 된다. */
+  .splashMark{ display:block;width:100px;height:auto }   /* 화면폭의 25% — 실측한 심볼형 스플래시 대역(카카오 24%·초록앱 23%) */
+  .splashName{font-family:'IksuniMark',-apple-system,"Apple SD Gothic Neo",system-ui,sans-serif;font-size:25px;font-weight:400;color:var(--text)}
+  /* 만든 곳 — 화면 아래 작게. 제품 이름(익순이)과 만든 회사(Jumin Labs)가 다를 때 적는
+     통용 방식 (Claude→ANTHROPIC, 요기요→Delivery Hero, 타다→VCNC 와 같은 자리·크기).
+     가운데 락업과 겹치지 않게 absolute — 마크·이름의 세로 중앙 정렬에 영향을 주지 않는다. */
+  .splashBy{
+    position:absolute;left:0;right:0;text-align:center;
+    bottom:calc(env(safe-area-inset-bottom) + 34px);
+    /* --off(가장 흐린 토큰)로는 대비가 다크 3.7:1 · 라이트 3.3:1 이라 「공식 표기」로 넣은 줄이
+       배경에 묻혔다. --dim 은 5.9:1 · 5.3:1 로 읽히면서도, 이름(25px·16:1)과는 크기·밝기
+       양쪽으로 충분히 벌어져 위계가 그대로다. */
+    font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--dim);
+  }
 
   .scrim{
     position:fixed;inset:0;z-index:63;    /* 서랍(61)·룰렛막(62) 위 — 로그아웃 확인창이 서랍에서 바로 뜬다 */
@@ -1123,6 +1193,26 @@ window.setThemeChrome = function(t){
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- 스플래시 — 앱이 첫 명단을 받기 전까지 화면을 덮는다 (위 CSS 참고). 첫 render() 에서 걷힌다. -->
+<div class="splash" id="splash">
+  <!-- 마크는 인라인 SVG — 앱 아이콘(make-icons.py)과 같은 도형을, 타일 없이 색 토큰으로 그린다.
+       PNG 아이콘을 쓰면 그 안에 구워진 배경(#0f1319) 때문에 다크는 마크만 뜨고 라이트는
+       검은 타일이 돼 테마마다 다른 그림이 된다. 좌표는 make-icons.py 의 100 그리드 그대로
+       (전체 y+1.5 광학 보정 반영). 획 8, 둥근 끝. -->
+  <svg class="splashMark" viewBox="16 12.5 68 73" aria-hidden="true">
+    <g fill="var(--wait)">
+      <rect x="30" y="12.5" width="8" height="15" rx="4"/>
+      <rect x="62" y="12.5" width="8" height="15" rx="4"/>
+      <path d="M16 36.5a16 16 0 0 1 16-16h36a16 16 0 0 1 16 16z"/>
+    </g>
+    <rect x="20" y="24.5" width="60" height="57" rx="12" fill="none" stroke="var(--wait)" stroke-width="8"/>
+    <path d="M32.1 57.8 43.6 69.3 68.1 44.8" fill="none" stroke="var(--go)" stroke-width="8"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="splashName">익순이</div>
+  <div class="splashBy">Jumin Labs</div>
+</div>
 
 <!-- 잠금 화면 — 로그인 상태를 확인하기 전까지 기본으로 떠 있다(=기본 잠김).
      입력칸(<input>)이 없다: 네이티브 키보드를 띄우지 않아야 화면이 안 밀린다. -->
@@ -1923,7 +2013,19 @@ window.dispatchEvent(new Event('fb-ready'));
       + (all.length && done === all.length ? ' full' : '');
   }
 
+  // 스플래시 걷기 — 첫 render() 에서(명단이든 붙여넣기 화면이든 「보여줄 게 준비됨」) 페이드.
+  // 무슨 일이 있어도 12초 뒤엔 걷는다 (연결이 영영 안 될 때 스플래시에 갇히지 않게).
+  var splashEl = document.getElementById('splash');
+  function hideSplash(){
+    if (!splashEl || hideSplash._done) return;
+    hideSplash._done = true;
+    splashEl.classList.add('out');
+    setTimeout(function(){ splashEl.classList.add('hide'); }, 300);
+  }
+  setTimeout(hideSplash, 12000);
+
   function render(){
+    hideSplash();
     if (!interactionActive() && deferredState){
       state = deferredState;
       deferredState = null;
@@ -4018,7 +4120,7 @@ window.dispatchEvent(new Event('fb-ready'));
       '<p class="about"><b>익선취향 예약 명단을 실시간으로 확인하고 관리하는 앱입니다.</b></p>'
       + '<p class="about">바뀐 내용은 <b>1초 안에 모든 기기에 반영</b>됩니다.</p>'
       + '<p class="about">명단을 복사하면 <b>단톡방 양식 그대로</b> 나옵니다.</p>'
-      + '<p class="credit">익순이 v1.7.0<br>© 2026 Jumin Labs</p>');
+      + '<p class="credit">익순이 v1.7.1<br>© 2026 Jumin Labs</p>');
   });
 
   // 브라우저로 처음 들어온 사람에게 한 번 권한다
@@ -4313,6 +4415,7 @@ window.dispatchEvent(new Event('fb-ready'));
   // 주소에 ?selftest 가 있으면 앱을 띄우지 않고, 실제 배포되는 순수 함수들을 노출한 뒤
   // selftest.js 가 단언 검사를 돌려 결과를 화면에 뿌린다. 평소엔 이 블록을 그냥 지나간다.
   if (/[?&]selftest\b/.test(location.search)) {
+    if (splashEl) splashEl.classList.add('hide');   // 결과 화면을 가리지 않게
     window.__ixTest = {
       parse: parse, normTime: normTime, sortItems: sortItems,
       pad: pad, ymd: ymd, parseYmd: parseYmd, shiftDate: shiftDate, dayGap: dayGap, bizDate: bizDate,
