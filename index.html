@@ -130,6 +130,12 @@ window.addEventListener('pageshow', remeasureSbcut);
     --scrim:rgba(0,0,0,.62);   --scrimLite:rgba(0,0,0,.5);
     /* 강조 — 다크 금색 · 라이트 테라코타. 칠·글자·큰 숫자 한 값 */
     --wait:#e8b757;
+    /* 마크(캐릭터)의 눈 — 테마와 무관하게 항상 이 값. 라이트 블록에서 «일부러 안 덮는다».
+       옛날엔 눈이 --ink(바탕색 = 구멍)였는데, 그러면 라이트에서 종이색 눈이 돼 얼굴이 텅 비어 보이고
+       홈 화면 아이콘(PNG 라 늘 검은 눈)과도 얼굴이 달라졌다(오너 확인 2026-09-13).
+       값은 다크 --ink 와 같은 #1c1c1e — 아이콘 생성기의 눈 색(INK)과도 같은 값이라 셋이 완전히 일치한다.
+       대비: 금색 얼굴 위 9.19:1 · 클레이 얼굴 위 5.18:1. */
+    --markEye:#1c1c1e;
     --onWait:#241a05;   --waitHover:#f0c46e;   --field:#202022;   /* 클로드 fill-brand-hover · fill-field */   --mark:#463a13;
     /* 방문 — 초록 (상태 색은 체크 원 하나에만 쓴다) */
     --go:#5fb08a;       --goTx:var(--go);      --onGo:#08241a;
@@ -140,20 +146,41 @@ window.addEventListener('pageshow', remeasureSbcut);
     /* 붙여넣기 오류 (줄 강조 + 안내문) */
     --errRow:rgba(201,115,106,.16);   --errTx:#e0a49d;
   }
-  /* ★ 라이트 L3 (2026-09-12 확정): 따뜻한 회백 #f6f5f2(베이지 아님) + 테라코타 강조 #b5541e(클로드 코드 clay 계열을 4.5:1 넘게 진하게). 다크 금색과 같은 따뜻한 가족. 이전 파랑(#2a5bd7) 강조와 베이지 시범은 폐기. */
+  /* ★ 라이트 L3 (2026-09-12 확정 · 2026-09-13 강조색 교체): 따뜻한 회백 #f6f5f2(베이지 아님) +
+     클로드 clay 강조 #d8714f — 면·글자 한 값(면 위 글자는 --onWait). 다크 금색과 같은 따뜻한 가족.
+     이전 파랑(#2a5bd7) 강조와 베이지 시범은 폐기. */
   html[data-theme="light"]{
     /* 면 층 간격을 다크와 같은 지각 밝기(OKLab ΔL)로 맞춤 — 선 .085 · 칩 .05 · 버튼 .08 · 눌림 .14.
        전엔 라이트가 다크의 절반 간격이라 구분선·칩·눌림이 희미했다. */
     --ink:#f6f5f2;      --panel:#ffffff;    --panel2:#e9e7e2;
     --line:#dad7d1;     --press:#e8e6e1;   --keyDn:#c9c5bd;
     --text:#1d1913;     --dim:#6b665f;   /* 글자·스크림·그림자도 회색족과 같은 따뜻한 기울기(h≈78) — 남색 잔재 #161a20 정리 */      --off:#8a857d;
-    --ph:#9a958e;
+    /* 입력 힌트 — 흰 칸 위 2.97:1 로 비텍스트 최소선(3.0)에도 못 미쳤다(2026-09-13 전수 점검).
+       회색 사다리 순서(text .216 < dim .513 < off .619 < ph)는 지키면서 3.30:1 까지만 진하게. */
+    --ph:#918d86;
     /* 흰 시트 위에도, 연회색 바탕(--ink) 위에도 보이게 한 단 진하게 */
     --btn:#e2dfd9;      --btnPress:#d3cfc8;  --btnWarn:#fbe6e3;  --btnWarnPress:#f5d2cd;
     --scrim:rgba(29,25,19,.44); --scrimLite:rgba(29,25,19,.34);
     /* 강조 한 값(--wait)으로 채움·큰 숫자·아이콘을 다 쓴다. 작은 글자엔 강조색을 안 쓰는 규칙은 다크와 같다. */
-    --wait:#b5541e;
-    --onWait:#ffffff;   --waitHover:#c9652b;   --field:#ffffff;    /* 클로드 fill-brand-hover · fill-field(light) */   --mark:#f6e0d3;
+    /* 2026-09-13 강조색 교체 — claude.ai 라이트 토큰을 직접 읽어 clay(#d97757) 계열로 옮겼다.
+       이전 #b5541e 의 문제는 밝기만이 아니라 색상이었다: 45.8° 로 7° 노란쪽이라 주황이 아니라 «갈색»으로 읽혔다.
+       밝기를 올리려면 «흰 버튼 글자»가 걸림돌이다 — 흰 글자 4.5 를 지키려면 L 이 .582 위로 못 올라가
+       지금(.559)과 사실상 같아진다. 그래서 다크와 같은 언어로 통일했다: «밝은 강조 면 + 어두운 글자».
+       이제 두 테마가 같은 규칙이다(다크 금색 #e8b757 + #241a05 / 라이트 clay #d8714f + #39180d).
+       L .559 → .661 로 실제로 밝아지면서, 종이 위 그래픽 대비 3.01 을 지키는 상한이기도 하다. */
+    --wait:#d8714f;
+    /* ★ 강조는 «한 값»이다 — 면이든 글자든 --wait 하나. (2026-09-13 오너 확정: 「일관성을 위해 글자 색도
+       클로드 주황으로」.) 한때 글자용 --waitTx(#bd4d21)를 따로 뒀다가 폐기 — 같은 「시간」 표시가
+       카드에선 밝은 주황, 명단 머리글에선 진한 주황으로 갈려 두 색이 됐다.
+       대가는 정직하게 적어 둔다: 「지금」 시간대 머리글(.gtime 17px/800)이 종이 위 3.01:1 로,
+       보통 글자 기준 4.5 에 못 미친다(큰 글자 기준 3.0 은 넘지만 17px 는 18.66px 문턱에 1.66 모자람).
+       판단 근거 — ① 20px 인 카드 시각·퇴근 타이머·룰렛 결과는 큰 글자라 3.28:1 로 충족 ② 「지금」이라는
+       뜻은 색 말고 왼쪽 3px 포인트색 레일(.group.now .ghead::before)이 이미 따로 지고 있어
+       색이 유일한 단서가 아니다 ③ 이 대비를 4.5 로 올리려면 강조색을 L .566 아래로 내려야 해서
+       교체 전 갈색(#b5541e)으로 되돌아간다. 색을 다시 나누려면 이 세 가지를 먼저 다시 볼 것. */
+    /* 강조 눌림은 «밝아진다» — 다크(#e8b757→#f0c46e, ΔL .047)와 같은 단차, 클로드 fill-brand-hover 와도 같은 방향.
+       어두운 글자를 얹으므로 밝아질수록 대비가 오른다(4.88 → 5.87). 회색 버튼의 눌림(라이트는 어두워짐)과는 별개 규칙. */
+    --onWait:#39180d;   --waitHover:#e58261;   --field:#ffffff;    /* --field = 클로드 fill-field(light) */   --mark:#f7d8cb;   /* --mark = 클로드 bg-tint-orange */
     --go:#2f9c6e;       --goTx:#1a7250;     --onGo:#ffffff;   /* 칩(--panel2) 위 4.9:1 */
     --warn:#b43f36;
     --onWarn:#7a2a20;
@@ -256,7 +283,6 @@ window.addEventListener('pageshow', remeasureSbcut);
     font-size:13px;font-weight:800;color:var(--text);
     padding:0;   /* 칩 면 없음 — 시간바의 「2/9」와 같은 꼴. 오른쪽 끝이 본문 끝(토글·칩과 같은 선)에 맞는다 */
   }
-  .dayprog.full{color:var(--goTx)}
   .tools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   /* 검색 버튼은 상단에 없다(오너: 한 번도 안 씀) — 서랍의 「이름 검색」이 대신. */
   /* 헤더 아이콘 버튼(메뉴)은 보이는 크기가 40 인데 손가락 기준 권장치는 44 다.
@@ -295,7 +321,12 @@ window.addEventListener('pageshow', remeasureSbcut);
   .slottime{font-size:20px;font-weight:800;color:var(--wait);letter-spacing:-.02em}
   /* 시각(금색)과 팀 수(흰색)는 색이 이미 가르므로 사이 「·」 없이 간격만 (오너 2026-09-11 「14:00·3팀 표기 맞나」 → 점 제거) */
   .leadmain{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.02em;margin-left:10px}
-  /* 「남은 예약 없음」은 숫자가 아니라 상태 설명 — 한 단계 작게 */
+  /* 끝난 상태 = 퇴근 타이머 「퇴근까지 2:31:07」 — 라벨은 부제 단계(14·흐림), 숫자는 지금 시각과 같은 급(20·금).
+     「남은 예약 없음」「지난 시간대 대기 n팀」은 뺐다(오너 2026-09-12): 대기 토글이 이미 그 상태를 보여주고 문구가 길었다. */
+  .leadmain.cdmode{margin-left:0}   /* 앞에 시각이 없으니 시각 옆 여백도 없다 — 첫 줄과 둘째 줄의 왼쪽선이 같아야 한다(오너 2026-09-12 「밸런스」) */
+  .leadmain .cdlab{font-size:14px;font-weight:600;color:var(--dim);margin-right:8px}
+  .leadmain .cd{color:var(--wait)}
+  /* 퇴근 시각이 지나면 숫자 없이 상태 한마디 — 숫자(20)보다 한 단계 아래 */
   .leadmain.done{font-size:17px;font-weight:700;letter-spacing:-.01em;margin-left:0}   /* 상태 설명 — 숫자(20)보다 한 단계 아래, 사다리의 17 */
   /* 전체 / 대기 토글 — 처리된(방문·취소) 행을 숨겨 「아직 체크할 것」만 본다.
      트랙 + 선택칸. 금색은 「지금」·주동작 몫이라 선택은 밝은 글자로만. */
@@ -680,9 +711,9 @@ window.addEventListener('pageshow', remeasureSbcut);
   }
   .drawer.open{transform:translateX(0)}
   .dwtitle{display:flex;align-items:center;gap:11px;padding:0 16px 16px}
-  .dwico{
-    width:36px;height:36px;flex:0 0 auto;border-radius:10px;
-    background:var(--panel2);
+  .dwico{   /* 잠금 아이콘과 같은 규칙 — 인라인 마크 + --ink 타일. 서랍은 --panel 위라 타일이 은은히 보인다 */
+    width:36px;height:36px;flex:0 0 auto;border-radius:8px;display:block;
+    background:var(--ink);
     -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;
   }
   .dwnames{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -802,7 +833,7 @@ window.addEventListener('pageshow', remeasureSbcut);
   .step .n{
     width:17px;height:17px;flex:0 0 auto;border-radius:50%;
     background:var(--line);color:var(--text);
-    font-size:10px;font-weight:800;display:grid;place-items:center;line-height:1;
+    font-size:10px;font-weight:800;display:grid;place-items:center;line-height:1;   /* 활자 사다리 예외 — 17px 원 안의 단계 숫자(글이 아니라 표식). 사다리 밖 값은 여기와 .bkback 의 「‹」 둘뿐이다 */
   }
   .step b{color:var(--text);font-weight:700}
   .key{
@@ -827,8 +858,7 @@ window.addEventListener('pageshow', remeasureSbcut);
        overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .sheetMsg{font-size:14px;color:var(--dim);padding:6px 0 14px}
 
-  /* 「지난 명단」 시트 — 목록은 「최근 변경 내역」(.lgrow) 처럼 한 줄(시각·요약·›), 행을 누르면 상세.
-     요약 배색·굵기는 상단 「방문 n · 취소 n」(.leadsub) 과 맞춘다. */
+  /* 「지난 명단」 시트 — 목록은 「최근 변경 내역」(.lgrow) 처럼 한 줄(시각·요약·›), 행을 누르면 상세. */
   .bklist{padding-top:2px}   /* 다른 시트처럼 제목 밑 선 없이 — 8px 뒤 바로 내용 */
   .bkrow{
     display:flex;align-items:center;gap:10px;
@@ -838,8 +868,13 @@ window.addEventListener('pageshow', remeasureSbcut);
   .bkt{flex:0 0 46px;font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
   .bksum{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--dim);font-variant-numeric:tabular-nums;
          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* 방문 초록 · 취소 빨강 — 「지난 명단」 목록의 요약(.bksum) 용. 상단 「방문 n·취소 n」과 같은 색.
-     (상세 명단은 .bkvrow.go/.off 로 따로 처리) */
+  /* 방문 초록 · 취소 빨강 — 「지난 명단」 목록의 요약(.bksum) 전용. (상세 명단은 .bkvrow.go/.off 로 따로 처리)
+     ★여기만 색을 쓰는 이유 — 본 화면(상단 카드 .leadsub · 시간대 머리글 .gbreak)의 「방문 n · 취소 n」은
+     일부러 «맨 글자»다. 거기엔 바로 옆·아래에 체크 원이 있어 같은 정보를 이미 색으로 말하고 있고,
+     시간대마다 반복돼 색 점이 쌓이면 정작 봐야 할 「지금」 칸이 묻힌다(상태색은 체크 원 하나에만 — 2026-09-12).
+     반면 이 시트는 «지나간 날의 아카이브»라 체크 원이 없다. 요약이 그 정보의 유일한 전달자이고
+     하루에 한 줄씩만 쌓이므로 색이 중복이 아니라 유일한 단서다.
+     (2026-09-13 정정: 예전 주석은 「상단과 같은 색」이라고 적혀 있었는데 본 화면이 맨 글자로 바뀐 뒤로 사실이 아니었다.) */
   #sheetBody em.go, #sheetBody em.off{font-style:normal;font-weight:700}
   #sheetBody em.go{color:var(--goTx)}
   #sheetBody em.off{color:var(--warn)}
@@ -858,7 +893,7 @@ window.addEventListener('pageshow', remeasureSbcut);
     margin-left:-2px;padding:3px 5px 3px 0;
     color:var(--text);cursor:pointer;line-height:1;
   }
-  .bkback::before{content:"‹";font-size:23px;font-weight:400;position:relative;top:-1px}
+  .bkback::before{content:"‹";font-size:23px;font-weight:400;position:relative;top:-1px}   /* 활자 사다리 예외 — 글자가 아니라 «아이콘»으로 쓰는 글리프. 크기는 제목(17)과 나란히 보이게 맞춘 값 */
   /* 보이는 건 화살표 그대로 — 누르는 영역만 넓힌다 (레이아웃·헤더 높이 영향 없음).
      엄지가 왼쪽·위로 빗나가기 쉬워 그쪽을 더 준다. 오른쪽은 제목 글자 안 먹게 조금만. */
   .bkback::after{content:"";position:absolute;inset:-11px -4px -8px -11px}
@@ -961,9 +996,12 @@ window.addEventListener('pageshow', remeasureSbcut);
   html[data-authed="1"] .lock{display:none}   /* 재실행 시 깜빡임 방지 (위 head 스크립트) — 그 사이는 .splash 가 덮는다 */
   /* 잠금화면은 스플래시와 일부러 다르게 둔다 — 스플래시는 앱을 열 때 한 번 스치는 브랜드
      화면이지만, 잠금은 하루에 여러 번 보는 기능 화면(PIN 패드 헤더)이라 다른 시트 제목들과
-     같은 시스템 폰트·굵기를 쓰는 게 실제 UI 와 더 잘 붙는다. 아이콘도 타일(홈 화면 아이콘
-     그대로)을 유지 — "이게 내 폰에 있는 그 앱 맞다"를 확인해주는 자리라 실물 아이콘이 낫다. */
-  .lockico{width:56px;height:56px;border-radius:12px;background:var(--panel2)}
+     같은 시스템 폰트·굵기를 쓰는 게 실제 UI 와 더 잘 붙는다.
+     아이콘은 «타일 비율 그대로»(viewBox 0 0 100 100) 두되 PNG 가 아니라 인라인 마크를 쓴다 —
+     2026-09-13 오너 지적: PNG 는 어두운 바탕이 구워져 있어 라이트 테마에서 혼자 다크 타일로 떴다.
+     타일 바탕을 --ink 로 칠하니 잠금 화면(바탕도 --ink)에선 타일이 사라져 마크만 뜨고,
+     라이트에선 종이색 타일 + 클레이 얼굴이 된다. 모서리는 iOS 타일 곡률(변의 22.4%). */
+  .lockico{width:56px;height:56px;border-radius:12.5px;background:var(--ink);display:block}
   .lockname{margin-top:14px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--text)}
   .locksub{margin-top:3px;font-size:13px;color:var(--dim)}
   /* 입력한 자릿수 표시 */
@@ -1048,7 +1086,9 @@ window.addEventListener('pageshow', remeasureSbcut);
     position:fixed;inset:0;z-index:290;
     background:var(--ink);   /* .lock 과 같은 이유 — 상태 표시줄 띠 색의 출처 */
     display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:27px;                    /* 마크 높이(107px)의 0.25배 — 로고 락업의 표준 간격 */
+    gap:24px;                    /* = 마크(96)의 0.25배 — 로고 락업의 표준 간격. 간격 토큰 8 의 배수이기도 하다.
+                                    2026-09-13: 규칙(0.25)은 원래 맞았는데 마크가 바뀌며 숫자만 낡아 있었다(107 기준 27).
+                                    아래 viewBox·line-height 손질로 «적은 값 ≒ 보이는 값»이 됐다(잔차 3px = 글꼴 위 여백). */
     padding-bottom:var(--sbcut, 0px);   /* standalone 상태바 보정 (위 head 스크립트). 가운데 락업만
                                            그 절반만큼 올라간다 — 회사명은 absolute 라 하단 고정 유지 */
     /* padding-bottom 에는 일부러 트랜지션을 걸지 않는다 — 한때 걸어봤더니 --sbcut 이
@@ -1063,8 +1103,14 @@ window.addEventListener('pageshow', remeasureSbcut);
   .splash.out{opacity:0;pointer-events:none}
   /* 스플래시는 「홈화면 아이콘」이 아니라 마크만 보여준다 (카카오·네이버·KT 등 통용되는 방식).
      타일·테두리 없음 — 색은 토큰이라 두 테마에서 같은 그림이 된다. */
-  .splashMark{ display:block;width:100px;height:auto }   /* 화면폭의 25% — 실측한 심볼형 스플래시 대역(카카오 24%·초록앱 23%) */
-  .splashName{font-family:'IksuniMark',-apple-system,"Apple SD Gothic Neo",system-ui,sans-serif;font-size:25px;font-weight:400;color:var(--text)}
+  /* viewBox 를 «그림에 딱» 맞췄다(19.1 19.1 61.8 61.8 = 실루엣 그대로) — 예전 14 14 72 72 는 상자에
+     여백이 있어 width:100px 이라 적어도 실제로는 85px 만 보였다. 이제 적은 값이 곧 보이는 크기다.
+     96px = 화면폭의 24.4%(393 기준. 375 에서 25.6 · 430 에서 22.3) — 실측한 심볼형 스플래시 대역
+     (카카오 24%·초록앱 23%) 한가운데. 간격 토큰 8 의 배수. */
+  .splashMark{ display:block;width:96px;height:auto }
+  /* line-height:1 — 줄상자가 글자를 딱 감싸야 위 gap 이 «보이는 간격»과 맞는다(기본 줄간격은 위에 8px 를 더 얹었다).
+     크기 25 는 활자 사다리 최상단 그대로 — 마크(96) : 이름 잉크(21.5) = 4.5:1 로 락업 통상 범위 안이다. */
+  .splashName{font-family:'IksuniMark',-apple-system,"Apple SD Gothic Neo",system-ui,sans-serif;font-size:25px;line-height:1;font-weight:400;color:var(--text)}
   /* 만든 곳 — 화면 아래 작게. 제품 이름(익순이)과 만든 회사(Jumin Labs)가 다를 때 적는
      통용 방식 (Claude→ANTHROPIC, 요기요→Delivery Hero, 타다→VCNC 와 같은 자리·크기).
      가운데 락업과 겹치지 않게 absolute — 마크·이름의 세로 중앙 정렬에 영향을 주지 않는다. */
@@ -1245,7 +1291,7 @@ window.addEventListener('pageshow', remeasureSbcut);
   <div id="list"></div>
 
   <div class="panel hide" id="pastePanel">
-    <h2 id="pasteTitle">오늘 예약 명단 붙여넣기</h2>
+    <h2>오늘 예약 명단 붙여넣기</h2>
     <p id="pasteHint">양식에 맞게 붙여넣어 주세요</p>
     <div class="tawrap">
       <div class="hl" id="hl" aria-hidden="true"></div>
@@ -1307,7 +1353,7 @@ window.addEventListener('pageshow', remeasureSbcut);
 <div class="drawerScrim off" id="drawerScrim"></div>
 <aside class="drawer" id="drawer" aria-label="메뉴">
   <div class="dwtitle">
-    <img class="dwico" src="apple-touch-icon.png" alt="" width="36" height="36" draggable="false">
+    <svg class="dwico" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><use href="#mkIksuni"/></svg>
     <span class="dwnames"><span class="dwname">익순이</span><span class="dwsubtitle">익선취향 예약 매니저</span></span>
   </div>
   <div class="dwsep"></div>
@@ -1374,17 +1420,31 @@ window.addEventListener('pageshow', remeasureSbcut);
 <div class="toast" id="toast"></div>
 
 <!-- 스플래시 — 앱이 첫 명단을 받기 전까지 화면을 덮는다 (위 CSS 참고). 첫 render() 에서 걷힌다. -->
+<!-- 캐릭터 「익순이」 마크 — 앱 아이콘(tools/make-icons.py)과 «같은 기하·같은 100 그리드».
+     뼈대는 황금비 파생이고 귀 위치·눈 지름·입 획·입 높이 네 값만 눈으로 맞췄다(표는 생성기 docstring).
+     한쪽만 고치면 홈 화면 아이콘과 앱 안의 마크가 어긋난다 — 반드시 둘 다 고칠 것.
+     색은 토큰이라 테마를 따라간다: 얼굴·귀 --wait, 입 --go. 눈만 --markEye 로 «두 테마 같은 검정» —
+     구멍(바탕색)으로 두면 라이트에서 흰 눈이 돼 홈 화면 아이콘과 얼굴이 달라진다(오너 확정 2026-09-13).
+     홈 화면 PNG 는 색이 구워져 있어 테마를 못 따라가지만, 앱 «안»에서 보이는 자리(스플래시·잠금·서랍)는
+     전부 이 하나를 <use> 로 가져다 쓰므로 라이트에선 클레이 얼굴이 된다. 2026-09-13. -->
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <defs>
+    <g id="mkIksuni">
+      <g fill="var(--wait)">
+        <rect x="28.5" y="19.1" width="9.0" height="13.5" rx="4.5"/>
+        <rect x="62.5" y="19.1" width="9.0" height="13.5" rx="4.5"/>
+        <rect x="19.1" y="28.1" width="61.8" height="52.8" rx="14.6"/>
+      </g>
+      <circle cx="38.2" cy="48.3" r="5.0" fill="var(--markEye)"/>
+      <circle cx="61.8" cy="48.3" r="5.0" fill="var(--markEye)"/>
+      <path d="M44.45 67.46 50.0 70.89 55.55 61.91" fill="none" stroke="var(--go)" stroke-width="6.5"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </defs>
+</svg>
+
 <div class="splash" id="splash">
-  <!-- 마크는 인라인 SVG — 앱 아이콘(make-icons.py)과 같은 도형을, 타일 없이 색 토큰으로 그린다.
-       PNG 아이콘을 쓰면 그 안에 구워진 배경 때문에 라이트에서 검은 타일이 돼 테마마다 다른 그림이 된다.
-       좌표는 make-icons.py 의 100 그리드 그대로 (몸통 18..82 x 20..80, 전체 y+1 광학 보정). 획 8, 둥근 끝.
-       2026-09-12 리메이크: 고리 삭제·몸통 64·둥글기 12(안 4). 체크는 --go. -->
-  <svg class="splashMark" viewBox="14 17 72 68" aria-hidden="true">
-    <path d="M18 37a12 12 0 0 1 12-12h40a12 12 0 0 1 12 12z" fill="var(--wait)"/>
-    <rect x="22" y="25" width="56" height="52" rx="8" fill="none" stroke="var(--wait)" stroke-width="8"/>
-    <path d="M33.84 55.67 44.16 66.0 66.16 44.0" fill="none" stroke="var(--go)" stroke-width="8"
-          stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
+  <svg class="splashMark" viewBox="19.1 19.1 61.8 61.8" aria-hidden="true"><use href="#mkIksuni"/></svg>
   <div class="splashName">익순이</div>
   <div class="splashBy">Jumin Labs</div>
 </div>
@@ -1392,7 +1452,7 @@ window.addEventListener('pageshow', remeasureSbcut);
 <!-- 잠금 화면 — 로그인 상태를 확인하기 전까지 기본으로 떠 있다(=기본 잠김).
      입력칸(<input>)이 없다: 네이티브 키보드를 띄우지 않아야 화면이 안 밀린다. -->
 <div class="lock" id="lock">
-  <img class="lockico" src="apple-touch-icon.png" alt="" width="56" height="56" draggable="false">
+  <svg class="lockico" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><use href="#mkIksuni"/></svg>
   <div class="lockname">익순이</div>
   <div class="locksub">익선취향 예약 매니저</div>
   <div class="lockdots" id="lockDots" role="status" aria-label="비밀번호 입력"></div>
@@ -2091,6 +2151,7 @@ window.dispatchEvent(new Event('fb-ready'));
   //  - 비정각 예약   : 그 시각이 되면 (5초)
   // 어느 쪽이든 그 시간대를 다 체크하면 그 즉시 넘어간다.
   var GRACE_ON_HOUR = 11, GRACE_OFF_HOUR = 5/60;
+  var CLOSE_HM = '21:00';      // 퇴근 시각 — 상단 카드의 퇴근 타이머 기준 (KST · 서버 시계)
   var AUTO_CANCEL_MIN = 15;    // 예약 시각에서 이만큼 지나도 체크가 없으면 취소 (직원 :10 컷의 백스톱)
   var AUTO_CANCEL_WINDOW = 1;  // 그 순간에만 한 번. 지나간 시간대를 뒤늦게 훑지 않는다
 
@@ -2152,6 +2213,24 @@ window.dispatchEvent(new Event('fb-ready'));
 
 
   // 상단 요약과 진행도만 다시 그린다 (목록은 건드리지 않는다)
+  // 퇴근 타이머 — 1초마다 숫자만 갈아 끼운다(render 없음). 끝난 상태에서만 돌고, 다른 상태로 바뀌면 멈춘다.
+  // 초 단위까지만: 소수점은 읽히지 않는 잔상이 되고 iOS 가 백그라운드·저전력에서 타이머를 조이니 의미가 없다.
+  function closeLeftSec(){ return Math.max(0, Math.round((slotMin(CLOSE_HM) - nowMin()) * 60)); }
+  function fmtLeft(s){
+    var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+    return h + ':' + (m < 10 ? '0' : '') + m + ':' + (x < 10 ? '0' : '') + x;
+  }
+  var cdTimer = null;
+  function cdTick(){
+    var el = document.getElementById('cdNum');
+    if (!el){ cdStop(); return; }
+    var s = closeLeftSec();
+    if (!s){ cdStop(); paintHead(); return; }   // 0 이 되면 「퇴근 시간」으로
+    el.textContent = fmtLeft(s);
+  }
+  function cdStart(){ if (!cdTimer) cdTimer = setInterval(cdTick, 1000); }
+  function cdStop(){ if (cdTimer){ clearInterval(cdTimer); cdTimer = null; } }
+
   function paintHead(){
     paintDate();
     var all = state ? state.items.slice().sort(sortItems) : [];
@@ -2169,6 +2248,7 @@ window.dispatchEvent(new Event('fb-ready'));
     var ls = document.getElementById('leadSub');
 
     if (slotPend.length){
+      cdStop();
       // 첫 줄 = 시각  팀 수 (+ 오른쪽 토글). 둘째 줄 = 몇인 몇팀 글자가 한 줄을 다 쓴다.
       // 「지금/다음」 라벨은 없다(오너, 2026-09-11) — 이 박스는 늘 «다음에 처리할 시간대»다.
       // 팀 수를 둘째 줄에 넣어 봤더니 구성 자리가 줄어 첫 줄로 되돌림(오너).
@@ -2182,10 +2262,15 @@ window.dispatchEvent(new Event('fb-ready'));
         .map(function(p){ return '<span class="pc">' + p + '인<b>' + byPax[p] + '</b>팀</span>'; })
         .join('<span class="pcsep">·</span>');   // 「5인 1팀 · 7인 1팀」 — 짝이 한 덩어리로 읽히게(시간바 「방문 n · 취소 n」과 같은 구분)
     } else {
+      // 처리할 시간대가 없으면 퇴근 타이머. 지난 시간대에 남은 대기는 대기 토글이 보여주므로 여기선 말하지 않는다.
       st.textContent = '';
-      lm.className = 'leadmain num done';
-      var pendLeft = all.filter(function(x){ return x.status === 'pending'; }).length;   // 지난 시간대에 남은 대기(지금 시간대는 없으니 전부 지난 것)
-      lm.textContent = !all.length ? '' : pendLeft ? '지난 시간대 대기 ' + pendLeft + '팀' : '남은 예약 없음';
+      var left = closeLeftSec();
+      if (!all.length){ lm.className = 'leadmain num done'; lm.textContent = ''; cdStop(); }
+      else if (left > 0){
+        lm.className = 'leadmain num cdmode';
+        lm.innerHTML = '<span class="cdlab">퇴근까지</span><span class="cd" id="cdNum">' + fmtLeft(left) + '</span>';
+        cdStart();
+      } else { lm.className = 'leadmain num done'; lm.textContent = '퇴근 시간'; cdStop(); }
       ls.className = 'leadsub num';
       ls.innerHTML = all.length ? dayTally(all) : '';
     }
@@ -2195,7 +2280,7 @@ window.dispatchEvent(new Event('fb-ready'));
     var dp = document.getElementById('dayProg');
     dp.textContent = done + '/' + all.length;
     dp.className = 'dayprog num' + (all.length ? '' : ' hide')
-      + (all.length && done === all.length ? ' full' : '');
+      ;   // 다 끝나도 색을 바꾸지 않는다 — 상태색은 체크 원에만(2026-09-12)
   }
 
   // 스플래시 걷기 — 첫 render() 에서(명단이든 붙여넣기 화면이든 「보여줄 게 준비됨」) 페이드.
@@ -3677,6 +3762,7 @@ window.dispatchEvent(new Event('fb-ready'));
   /* ---------- 자정 넘어감 뒷정리 ---------- */
   // 날짜가 바뀌면(rolloverIfNeeded) 하루 단위 UI 상태를 싹 비운다.
   function resetDateScopedUi(){
+    cdStop(); cancelAllLeaves();   // 날짜가 바뀌면 어제 기준 타이머·퇴장 예약은 무의미
     openMenu = null; collapsed = {}; touched = {};
     deferredState = null; backgroundRenderPending = false;
     backupState = { hour: -1, tries: 0, triesHour: -1 };
@@ -3946,7 +4032,7 @@ window.dispatchEvent(new Event('fb-ready'));
     }, { passive: false });
 
     // 진입: 서랍 맨 위 아이콘 롱프레스 (0.65초).
-    // <img> 라 안드로이드·데스크톱은 길게 누르면 「이미지 저장/복사」 메뉴가 떠 롱프레스를 가로챈다 → 막는다.
+    // 길게 누를 때 뜨는 컨텍스트 메뉴가 롱프레스를 가로채지 않도록 막는다(옛 <img> 시절의 「이미지 저장」 메뉴 대비로 넣었고, SVG 로 바뀐 뒤에도 데스크톱 우클릭 메뉴를 막아 준다).
     var ico = document.querySelector('.dwico');
     ico.addEventListener('contextmenu', function(e){ e.preventDefault(); });
     var timer = null, sx = 0, sy = 0;
@@ -4019,6 +4105,9 @@ window.dispatchEvent(new Event('fb-ready'));
     ['상단 시간은 언제 바뀌나요?',
       '정각 예약은 11분 뒤, 그 외는 예약 시각이 되면 다음 시간대로 넘어갑니다.\n'
       + '또는 그 시간대 예약을 모두 처리하면 바로 넘어갑니다.'],
+    ['「퇴근까지」는 뭔가요?',
+      '그날 예약을 모두 처리하면 퇴근 시각(오후 9시)까지 남은 시간이 표시됩니다.\n'
+      + '새 예약이 들어오면 다시 시간대 화면으로 돌아옵니다.'],
     ['시간대는 왜 자동으로 접히나요?',
       '남은 예약이 없으면 5초 뒤 자동으로 접힙니다.'],
     ['메모는 어떻게 쓰나요?',
@@ -4045,9 +4134,12 @@ window.dispatchEvent(new Event('fb-ready'));
             + '<div class="a">' + f[1] + '</div></div>';
         }).join('')
       + '</div>');
-    // 시트 높이는 고정하지 않는다 — 질문 8개 + 답 1개(한 번에 하나만 펼침)면 어느 폰에서도
-    // 82vh 에 한참 못 미쳐 스크롤이 안 생긴다. 펼치면 답 한 뼘(~80px)만큼 위로 늘어나
-    // 답 전체가 보이고, 접으면 되돌아온다. (max-height:82vh 는 안전망으로만)
+    // 시트 높이는 고정하지 않는다 — 펼치면 답 한 뼘(~80px)만큼 위로 늘어나 답 전체가 보이고,
+    // 접으면 되돌아온다. 높이 상한은 max-height:82vh.
+    // 실측(2026-09-13, 질문 9개 기준): 852 화면은 시트 556 = 73% 로 스크롤 없음.
+    // 667·700 화면은 82vh 상한에 닿아 시트 안이 스크롤된다 — «질문 8개였을 때도 똑같았다»(476/580·503/613).
+    // 즉 작은 화면의 스크롤은 질문 수 탓이 아니라 화면이 낮아서이고, 시트 기본 동작이라 그대로 둔다.
+    // (예전 주석은 「8개면 어느 폰에서도 스크롤이 안 생긴다」고 적혀 있었는데 실측과 달랐다.)
   });
   // 한 번에 하나만 펼친다
   document.getElementById('sheetBody').addEventListener('click', function(e){
@@ -4314,7 +4406,7 @@ window.dispatchEvent(new Event('fb-ready'));
       '<p class="about"><b>익선취향 예약 명단을 실시간으로 확인하고 관리하는 앱입니다.</b></p>'
       + '<p class="about">바뀐 내용은 <b>1초 안에 모든 기기에 반영</b>됩니다.</p>'
       + '<p class="about">명단을 복사하면 <b>단톡방 양식 그대로</b> 나옵니다.</p>'
-      + '<p class="credit">익순이 v1.8.0<br>© 2026 Jumin Labs</p>');
+      + '<p class="credit">익순이 v2.0.0<br>© 2026 Jumin Labs</p>');
   });
 
   // 브라우저로 처음 들어온 사람에게 한 번 권한다
@@ -4678,6 +4770,7 @@ window.dispatchEvent(new Event('fb-ready'));
   }
   function lockShow(msg){
     if (unlockTimer){ clearTimeout(unlockTimer); unlockTimer = null; }   // 위 경합 차단
+    cdStop();                            // 잠금 밑에서 1초 타이머가 돌 이유 없음
     try { localStorage.removeItem('ix-authed'); } catch(e){}
     document.documentElement.removeAttribute('data-authed');   // 표식을 지워야 잠금이 실제로 보인다
     clearPin();                          // 키패드는 늘 빈 상태로 나타난다 (finish 는 성공 시 안 비우므로 여기서)
