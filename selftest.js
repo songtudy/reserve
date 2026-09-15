@@ -328,17 +328,30 @@
   })();
 
   /* ==================== 자동취소 — 15분 창 ==================== */
-  group('autoCancelDue — 예약시각 +15분 1분 창에서만');
+  group('autoCancelDue — 예약시각 +15분부터 +20분 전까지만');
   (function(){
     var d = T.autoCancelDue, S = 14 * 60;   // 14:00
     var P = function(){ return { status: 'pending', time: '14:00' }; };
     tru('정확히 +15분 → 취소', d(P(), S + 15) === true);
     tru('+15분 30초 → 취소', d(P(), S + 15.5) === true);
-    tru('+15분 59초 → 취소', d(P(), S + 15 + 0.98) === true);
+    tru('+17분 → 취소', d(P(), S + 17) === true);
+    tru('+19분 59초 (창 끝자락) → 취소', d(P(), S + 19 + 0.98) === true);
     tru('+14분 30초 (아직) → 아님', d(P(), S + 14.5) === false);
-    tru('+16분 30초 (창 지남) → 아님', d(P(), S + 16.5) === false);
+    tru('+20분 (창 지남) → 아님', d(P(), S + 20) === false);
     tru('+25분 (뒤늦게) → 아님', d(P(), S + 25) === false);
     tru('대기 아니면 → 아님', d({ status: 'arrived', time: '14:00' }, S + 15) === false);
+    tru('noAuto 붙었으면 → 아님', d({ status: 'pending', time: '14:00', noAuto: 1 }, S + 15) === false);
+  })();
+
+  group('lateEntry — 등록하는 순간 이미 창이 열려 있었나');
+  (function(){
+    var L = T.lateEntry, S = 14 * 60;   // 14:00 예약, 창은 14:15 부터
+    tru('14:10 에 등록 → 아직 (앱이 지켜본다)', L('14:00', S + 10) === false);
+    tru('14:14 에 등록 → 아직', L('14:00', S + 14) === false);
+    tru('14:15 에 등록 → 이미 지남 (사람 몫)', L('14:00', S + 15) === true);
+    tru('14:17 에 등록 → 사람 몫', L('14:00', S + 17) === true);
+    tru('14:40 에 등록 → 사람 몫', L('14:00', S + 40) === true);
+    tru('오전에 저녁 예약 등록 → 아직', L('19:00', 10 * 60) === false);
   })();
 
   /* ==================== dev/prod 판정 ==================== */
@@ -359,7 +372,9 @@
 
   /* ==================== HTML 조각 sanity ==================== */
   group('HTML 헬퍼 sanity');
-  check('esc 는 < > & 만 변환 (따옴표는 그대로)', T.esc('<a href="&">'), '&lt;a href="&amp;"&gt;');
+  // 2026-09-15: esc 가 따옴표까지 막도록 바뀌었다 — 속성값에 써도 빠져나갈 수 없게.
+  check('esc 는 < > & " \' 를 전부 변환', T.esc('<a href="&">'), '&lt;a href=&quot;&amp;&quot;&gt;');
+  check('esc 는 홑따옴표도 막는다', T.esc("it's"), 'it&#39;s');
   tru('hourOptions 는 영업시간 범위', (function(){
     var h = T.hourOptions();
     return h.indexOf('value="' + T.pad(T.consts.HOUR_MIN) + '"') >= 0
