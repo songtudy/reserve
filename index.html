@@ -350,15 +350,12 @@ window.addEventListener('pageshow', remeasureSbcut);
   .slottime{font-size:20px;font-weight:800;color:var(--wait);letter-spacing:-.02em}
   /* 시각(금색)과 팀 수(흰색)는 색이 이미 가르므로 사이 「·」 없이 간격만 (오너 2026-09-11 「14:00·3팀 표기 맞나」 → 점 제거) */
   .leadmain{font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.02em;margin-left:10px}
-  /* 끝난 상태 = 퇴근 타이머 「퇴근까지 2:31:07」 — 라벨은 부제 단계(14·흐림), 숫자는 지금 시각과 같은 급(20·금).
-     「남은 예약 없음」「지난 시간대 대기 n팀」은 뺐다(오너 2026-09-12): 대기 토글이 이미 그 상태를 보여주고 문구가 길었다. */
-  .leadmain.cdmode{margin-left:0}   /* 앞에 시각이 없으니 시각 옆 여백도 없다 — 첫 줄과 둘째 줄의 왼쪽선이 같아야 한다(오너 2026-09-12 「밸런스」) */
-  .leadmain .cdlab{font-size:14px;font-weight:600;color:var(--dim);margin-right:8px}
-  .leadmain .cd{color:var(--wait)}
-  /* 퇴근 시각이 지나면 숫자 없이 인사 한마디 「오늘도 고생하셨습니다」 — 숫자(20)보다 한 단계 아래.
-     2026-09-13 오너: 「퇴근 시간」은 사실만 말해서 바꿈. 말투는 앱 전체와 같은 «~습니다»
-     (「대기 중인 팀이 없습니다」·「비밀번호가 맞지 않습니다」와 한 목소리 — 여기만 「~했어요」면 혼자 튄다).
-     「오늘도」인 이유: 매일 밤 보는 화면이라 「오늘」만 쓰면 오늘만 특별한 일처럼 읽힌다. */
+  /* 끝난 상태 = 「남은 예약 없음」 하나뿐이다(2026-09-16). 여기 있던 퇴근 타이머(.cdmode/.cdlab/.cd)와
+     인사말은 곰 말풍선으로 옮겼고, 쓰는 데가 없어져 규칙도 같이 지웠다.
+     ★이 문구는 2026-09-12 에 한 번 뺐던 것이다 — 그땐 옆에 퇴근 카운트가 있어 군더더기였다.
+       카운트가 곰에게 가면서 주 줄이 비어 되돌렸다. 카드를 다시 손댈 땐 이 내력을 먼저 볼 것.
+     ★말투는 ① 명사형. 카드 주 줄은 원래 「7팀」 같은 상태 표시고, 예전의
+       「오늘도 고생하셨습니다」만 ③ 문장이라 혼자 튀었다. 그 말은 이제 곰이 한다. */
   .leadmain.done{font-size:17px;font-weight:700;letter-spacing:-.01em;margin-left:0}   /* 상태 설명 — 숫자(20)보다 한 단계 아래, 사다리의 17 */
   /* 전체 / 대기 토글 — 처리된(방문·취소) 행을 숨겨 「아직 체크할 것」만 본다.
      트랙 + 선택칸. 금색은 「지금」·주동작 몫이라 선택은 밝은 글자로만. */
@@ -853,6 +850,68 @@ window.addEventListener('pageshow', remeasureSbcut);
   }
   .qa.open .a{display:block}
   .qa .a em{font-style:normal;color:var(--text);font-weight:600}
+
+  /* ── 다 처리한 화면 — 곰이 말을 건다 ──
+     규칙: «처리할 게 없을 때만 곰이 나온다». 일하는 화면엔 그림이 하나도 없다(정보는 글자).
+     이 자리는 대기 모드에서 그날 대기가 전부 없어졌을 때만 나오므로 하루 한 번이다.
+     ★자리는 «스플래시 곰과 똑같이» 잡는다 — 저녁에 앱을 열면 스플래시가 걷히면서 곰이
+       그 자리에 그대로 남아 두 화면이 이어진다. 어떻게 맞췄는지는 아래 .donebear 주석에.
+     ★하트는 여기서 «움직이지 않는다». 태어나는 건 스플래시 애니메이션의 몫이고, 여기선
+       다 끝냈다는 표시로만 달려 있다. 반복(6초 주기)도 시험했다 — 이 화면이 퇴근까지 몇 시간
+       떠 있어 계속 깜빡였다. 반려(2026-09-16).
+     말풍선은 시트·확인창과 같은 재질(--panel2 · --radius · 글자색 8% 림) — 새 꼴을 안 만든다. */
+  .empty.bear{padding:0}   /* .empty 의 위아래 36 을 뺀다 — 곰은 흐름 밖에서 제 자리를 잡는다 */
+  .donebear{
+    /* ★스플래시와 «똑같은 규칙»로 자리를 잡는다 — 화면 전체에 깔고 가운데 정렬, 아래 여백은
+       --sbcut. 셸 높이(--topH)·안전영역이 식에서 통째로 빠져, 두 곰이 계산이 아니라 «구조»로
+       같은 자리에 선다. 전에는 본문 영역 한가운데를 잡고 여백으로 끌어올렸는데, 아무리 맞춰도
+       0.8px 이 남아 스플래시가 걷힐 때 곰이 미세하게 움직였다(오너 2026-09-16).
+       ★가운데에 세우는 것은 «곰 상자 하나»다(.dbwrap). 말풍선까지 같이 세우면 글자 줄 높이가
+       기기 배율마다 다르게 떨어져 곰이 0.45px 씩 흔들린다(3배 시뮬 실측). 말풍선은 흐름에서
+       빼서 곰 밑에 매단다 — 이제 곰 자리는 글자와 무관하다.
+       ★위 여백은 스플래시 락업 속이 다른 몫만 메운다(스플래시는 마크 밑에 이름이 붙어 그만큼
+       위로 밀린다). 화면 크기·기기와 무관한 상수다.
+       ★흐름에서 빠지므로 이 칸은 높이가 0 — 스크롤은 애초에 생기지 않는다.
+       ★pointer-events 를 끊는다: 화면을 덮지만 그리기만 하고 아래 조작을 막지 않는다. */
+    position:fixed;left:0;right:0;top:0;bottom:0;
+    display:flex;align-items:center;justify-content:center;
+    padding:0 16px;
+    /* 28.62 = 스플래시에서 마크 밑에 [간격 13 + 이름 25] 가 붙어 마크가 위로 밀리는 몫(그 절반이
+       14.31). 아래 여백을 주면 그 절반만큼 올라가므로 두 배로 적는다. 글자가 아니라 상자 치수에서
+       나온 값이라 기기·배율과 무관한 상수다(393×852·375×667·3배 시뮬 모두 차이 0.00 확인). */
+    padding-bottom:calc(var(--sbcut, 0px) + 28.62px);
+    pointer-events:none;
+  }
+  .dbwrap{position:relative;width:125px}   /* 곰 상자 = 가운데 정렬의 유일한 기준 */
+  /* ★액자는 «곰 기준»(0 0 100 100) — 잠금·서랍과 같은 틀이다. 스플래시 액자(-3.25 … 111.80)를
+     쓰면 하트 자리까지 폭에 들어가 곰이 작아지고(120 지정 → 실제 80) 4px 왼쪽으로 치우친다(실측).
+     하트는 상자 오른쪽 밖으로 나가므로 overflow 를 열어 둔다. */
+  /* 폭 125 = 곰 그림 94px — 스플래시 곰과 같은 크기(오너 2026-09-16).
+     곰 그림은 액자의 75.45% 를 차지하므로 상자 값과 그림 값이 다르다: 스플래시는 상자 140 에
+     액자 111.8 이라 그림이 94, 여기는 상자 125 에 액자 100 이라 그림이 94 로 같아진다. */
+  /* ★가로도 스플래시와 같은 자리. 스플래시 액자는 오른쪽에 하트 자리를 비워 둬서(-3.25 … 111.80)
+     곰이 액자 «안»에서 왼쪽으로 치우쳐 선다 — 화면 한가운데 기준 -4.60px. 여기 액자는 곰 기준이라
+     -1.27px 뿐이라 3.33px 이 어긋났다(실측: 두 액자를 같은 폭에 나란히 놓고 곰 잉크만 잼).
+     밑의 말풍선·워드마크는 둘 다 가운데라, 옮겨야 «곰과 글자의 관계»까지 스플래시와 같아진다. */
+  .donebear .mk{width:125px;height:auto;display:block;overflow:visible;transform:translateX(-3.33px)}
+  .donebear .say{
+    position:absolute;top:100%;left:50%;transform:translateX(-50%);
+    width:max-content;max-width:78vw;
+    background:var(--panel2);border-radius:var(--radius);
+    /* ★margin 12 → 6.8 (오너 2026-09-16). 곰 그림 밑에서 꼬리 끝까지 17.2px 이었는데, 꼬리가
+       곰에서 떠 있어 말풍선이 «곰 것»이 아니라 그냥 아래 놓인 상자처럼 보였다. 12px 이면 꼬리가
+       곰에서 나온 것으로 읽히면서 두 모양이 서로 안 눌린다(8px 은 앞발·초록 체크와 뭉친다).
+       ※상자 값(6.8) ≠ 보이는 값(12) — 액자 아래 12.2px 이 빈칸이다. 마크 크기를 바꾸면 다시 잴 것.
+       ※스플래시의 곰→이름 18.1px 과는 일부러 다르다. 워드마크는 떨어져야 하고 꼬리는 붙어야 한다. */
+    padding:11px 16px;margin-top:6.8px;
+    font-size:14px;font-weight:700;color:var(--text);line-height:1.35;
+    box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--text) 8%, transparent);
+  }
+  .donebear .say::before{
+    content:"";position:absolute;left:50%;top:-7px;transform:translateX(-50%);
+    border-left:8px solid transparent;border-right:8px solid transparent;
+    border-bottom:8px solid var(--panel2);
+  }
   /* 설치 안내 — 기기별 카드 */
   /* 기기 카드 — 면만. 왼쪽 색 띠는 뺐다(본 명단에서도 없앤 장식). 기기 구분은 제목 색이 한다. */
   .plat{
@@ -1565,6 +1624,7 @@ window.addEventListener('pageshow', remeasureSbcut);
      한쪽만 고치면 홈 화면 아이콘과 앱 안의 마크가 어긋난다 — 반드시 둘 다 고칠 것. -->
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
   <defs>
+    <g id="mkHeart" transform="translate(92.9833 11.8858) scale(2.09108) translate(-78.4100 -23.6000)"><path fill="#f2717a" d="M75.79 19.20 Q76.32 19.20 76.78 19.42 Q77.24 19.64 77.23 19.68 Q77.21 19.72 77.25 19.70 Q77.29 19.68 77.51 19.88 Q77.73 20.08 77.90 20.34 Q78.08 20.61 78.25 20.98 Q78.43 21.35 78.50 21.65 Q78.58 21.95 79.06 21.54 Q79.53 21.12 80.33 20.84 Q81.12 20.55 81.53 20.55 Q81.95 20.55 82.35 20.66 Q82.75 20.77 83.12 21.10 Q83.50 21.43 83.65 21.85 Q83.81 22.27 83.81 22.58 Q83.81 22.89 83.76 22.91 Q83.72 22.93 83.72 23.18 Q83.72 23.42 83.68 23.41 Q83.63 23.40 83.63 23.55 Q83.63 23.69 83.50 24.02 Q83.37 24.35 83.08 24.76 Q82.80 25.18 82.72 25.21 Q82.63 25.23 82.41 25.51 Q82.18 25.79 81.77 26.14 Q81.35 26.49 80.98 26.71 Q80.60 26.93 78.96 27.83 Q77.33 28.72 76.99 28.75 Q76.66 28.77 76.08 28.14 Q75.50 27.51 75.44 27.50 Q75.38 27.50 75.37 27.42 Q75.37 27.34 75.33 27.35 Q75.29 27.37 75.22 27.22 Q75.15 27.07 74.87 26.78 Q74.59 26.49 74.54 26.34 Q74.49 26.20 74.39 26.13 Q74.28 26.05 73.93 25.48 Q73.58 24.91 73.32 24.32 Q73.06 23.73 72.97 23.31 Q72.88 22.89 72.90 22.24 Q72.92 21.58 72.97 21.58 Q73.01 21.59 73.03 21.38 Q73.06 21.18 73.21 20.87 Q73.36 20.56 73.40 20.58 Q73.44 20.59 73.45 20.51 Q73.45 20.43 73.51 20.40 Q73.58 20.37 73.58 20.29 Q73.58 20.21 74.09 19.82 Q74.59 19.42 74.91 19.35 Q75.23 19.28 75.24 19.24 Q75.26 19.20 75.79 19.20 Z"/></g>
     <g id="mkIksuni">
       <!-- 익순이 마크 = 곰만. 하트는 스플래시에만 붙는다 (아이콘/잠금/서랍은 이 파일 그대로).
              곰이 타일의 80퍼센트 — 하트가 빠져 생긴 자리를 곰이 받았다 (64.5 → 75.0). -->
@@ -1574,7 +1634,7 @@ window.addEventListener('pageshow', remeasureSbcut);
 </svg>
 
 <div class="splash" id="splash">
-  <svg class="splashMark" viewBox="-3.25 -1.80 111.80 96.10" aria-hidden="true"><g class="splashHeart"><g transform="translate(92.9833 11.8858) scale(2.09108) translate(-78.4100 -23.6000)"><path fill="#f2717a" d="M75.79 19.20 Q76.32 19.20 76.78 19.42 Q77.24 19.64 77.23 19.68 Q77.21 19.72 77.25 19.70 Q77.29 19.68 77.51 19.88 Q77.73 20.08 77.90 20.34 Q78.08 20.61 78.25 20.98 Q78.43 21.35 78.50 21.65 Q78.58 21.95 79.06 21.54 Q79.53 21.12 80.33 20.84 Q81.12 20.55 81.53 20.55 Q81.95 20.55 82.35 20.66 Q82.75 20.77 83.12 21.10 Q83.50 21.43 83.65 21.85 Q83.81 22.27 83.81 22.58 Q83.81 22.89 83.76 22.91 Q83.72 22.93 83.72 23.18 Q83.72 23.42 83.68 23.41 Q83.63 23.40 83.63 23.55 Q83.63 23.69 83.50 24.02 Q83.37 24.35 83.08 24.76 Q82.80 25.18 82.72 25.21 Q82.63 25.23 82.41 25.51 Q82.18 25.79 81.77 26.14 Q81.35 26.49 80.98 26.71 Q80.60 26.93 78.96 27.83 Q77.33 28.72 76.99 28.75 Q76.66 28.77 76.08 28.14 Q75.50 27.51 75.44 27.50 Q75.38 27.50 75.37 27.42 Q75.37 27.34 75.33 27.35 Q75.29 27.37 75.22 27.22 Q75.15 27.07 74.87 26.78 Q74.59 26.49 74.54 26.34 Q74.49 26.20 74.39 26.13 Q74.28 26.05 73.93 25.48 Q73.58 24.91 73.32 24.32 Q73.06 23.73 72.97 23.31 Q72.88 22.89 72.90 22.24 Q72.92 21.58 72.97 21.58 Q73.01 21.59 73.03 21.38 Q73.06 21.18 73.21 20.87 Q73.36 20.56 73.40 20.58 Q73.44 20.59 73.45 20.51 Q73.45 20.43 73.51 20.40 Q73.58 20.37 73.58 20.29 Q73.58 20.21 74.09 19.82 Q74.59 19.42 74.91 19.35 Q75.23 19.28 75.24 19.24 Q75.26 19.20 75.79 19.20 Z"/></g></g><use href="#mkIksuni"/></svg>
+  <svg class="splashMark" viewBox="-3.25 -1.80 111.80 96.10" aria-hidden="true"><g class="splashHeart"><use href="#mkHeart"/></g><use href="#mkIksuni"/></svg>
   <div class="splashName">익순이</div>
   <div class="splashBy">Jumin Labs</div>
 </div>
@@ -1747,9 +1807,11 @@ window.dispatchEvent(new Event('fb-ready'));
   var backgroundRenderPending = false;
   var deferredState = null;
   // 목록 표시 범위 — 'all'(전체) / 'pending'(대기만: 방문·취소 행 숨김). 우상단 토글로 바꾼다.
-  // 저장값이 남아 재실행에도 유지된다 (토글이 늘 보여서 「왜 행이 없지」 헷갈릴 일은 없다).
-  var viewMode = 'all';
-  try { if (localStorage.getItem('ix-view') === 'pending') viewMode = 'pending'; } catch(e){}
+  // ★열 때마다 늘 「대기」다 — 기억하지 않는다(오너 2026-09-16). 영업 중에 앱을 꺼내는 이유는
+  //   «남은 것»을 보려는 것이고, 전체는 그때그때 눌러 보는 것이다. 어제 뭘 눌렀는지가 오늘 첫
+  //   화면을 정하면 열 때마다 무엇이 나올지 모르게 된다. 토글은 늘 보이니 한 번에 바꿀 수 있다.
+  //   ※'ix-view' 저장값은 이제 읽지도 쓰지도 않는다 — 옛 폰에 남아 있어도 아무 일도 안 한다.
+  var viewMode = 'pending';
 
   // 목록 안에서 손대는 중인 것 = 열린 ⋯ 메뉴뿐 (수정은 바텀시트라 목록과 무관 — 그 사이 통째 render 돼도 된다)
   // 체크 직후 300ms 는 «팝이 뛰는 중» — 이 사이 서버 에코(내 쓰기)가 통째 render 로 돌아오면 팝이 끊긴다(오너: 「체크가 매끄럽지 않다」).
@@ -2342,9 +2404,9 @@ window.dispatchEvent(new Event('fb-ready'));
     var cf = document.getElementById('dwConn');
     if (!cf) return;
     cf.className = 'dwfoot' + (ready ? '' : ' off');
+    // 여기엔 연결 상태 한 마디만 둔다 — 빌드 도장을 붙여 봤다가 뺐다(오너 2026-09-16).
     cf.innerHTML = '<span class="dot' + (ready ? '' : ' stale') + '"></span>'
-      + (ready ? '연결됨' : '연결 안 됨')
-      + (IS_DEV ? ' · ' + BUILD_STAMP : '');   // 테스트에서만 빌드 도장을 같이 보인다
+      + (ready ? '연결됨' : '연결 안 됨');
   }
   function setSync(ok){
     if (ok === false) listFresh = false;   // 끊긴 순간부터 화면의 명단은 «옛 것»이다
@@ -2427,16 +2489,44 @@ window.dispatchEvent(new Event('fb-ready'));
   // 퇴근 타이머 — 1초마다 숫자만 갈아 끼운다(render 없음). 끝난 상태에서만 돌고, 다른 상태로 바뀌면 멈춘다.
   // 초 단위까지만: 소수점은 읽히지 않는 잔상이 되고 iOS 가 백그라운드·저전력에서 타이머를 조이니 의미가 없다.
   function closeLeftSec(){ return Math.max(0, Math.round((slotMin(CLOSE_HM) - nowMin()) * 60)); }
+  // 다 처리한 화면에서 곰이 하는 말. 퇴근 전엔 남은 시간, 퇴근 뒤엔 인사.
+  // 남은 시간은 「2시간 30분 07초」 꼴. 콜론꼴(2:31:07)이었는데 끝으로 갈수록 죽은 0 이 앞에
+  // 붙어 「0:00:58」 처럼 어색해졌다(오너 2026-09-16) — 빈 단위는 아예 뗀다.
+  function doneSay(){
+    var left = closeLeftSec();
+    if (!left) return '오늘 하루 고생하셨어요!';
+    // .num = 고정폭 숫자. 없으면 1초마다 숫자 폭이 달라져 말풍선이 들썩인다(오너 2026-09-16).
+    return '퇴근까지 <span id="doneCd" class="num">' + fmtLeft(left) + '</span> 남았어요!';
+  }
+  function doneBearHtml(){
+    return '<div class="donebear"><div class="dbwrap">'
+      + '<svg class="mk" viewBox="0 0 100 100" aria-hidden="true">'
+      +   '<use href="#mkHeart"/><use href="#mkIksuni"/>'
+      + '</svg>'
+      + '<div class="say">' + doneSay() + '</div></div></div>';
+  }
+  // ★앞 단위는 그대로, 뒤 단위만 0 을 채운다(「2시간 30분 07초」).
+  //   안 채우면 초가 10→9 로 떨어질 때마다 글자가 하나 줄어 말풍선이 1분에 두 번 들썩인다.
+  //   앞 단위는 채우지 않는다 — 「09초 남았어요」는 뻣뻣하다. 앞 단위가 자릿수를 잃는 건
+  //   저녁 내내 세 번뿐이고(시간이 빠질 때·분이 빠질 때·10초→9초), 그건 흔들림이 아니라 내용이
+  //   실제로 바뀌는 자리다.
   function fmtLeft(s){
     var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
-    return h + ':' + (m < 10 ? '0' : '') + m + ':' + (x < 10 ? '0' : '') + x;
+    var p = function(n){ return (n < 10 ? '0' : '') + n; };
+    if (h) return h + '시간 ' + p(m) + '분 ' + p(x) + '초';
+    if (m) return m + '분 ' + p(x) + '초';
+    return x + '초';
   }
   var cdTimer = null;
   function cdTick(){
-    var el = document.getElementById('cdNum');
-    if (!el){ cdStop(); return; }
+    var el = document.getElementById('doneCd');   // 이제 카드가 아니라 곰 말풍선 안의 숫자다
+    // ★곰 화면이 내려갔으면 멈춘다. 전체 보기로 가면 이 칸은 숨겨질 뿐 지워지지는 않아서,
+    //   id 만 보고 돌면 «안 보이는 숫자»를 하루 종일 1초마다 고친다(폰 배터리). 예전엔 카드가
+    //   카운트를 들고 있어 paintHead 의 cdStop() 이 잡아 줬는데, 곰에게 옮기며 그 고리가 끊겼다.
+    var em = document.getElementById('emptyMsg');
+    if (!el || !em || !em.classList.contains('bear')){ cdStop(); return; }
     var s = closeLeftSec();
-    if (!s){ cdStop(); paintHead(); return; }   // 0 이 되면 「오늘도 고생하셨습니다」로
+    if (!s){ cdStop(); render(); return; }   // 0 이 되면 곰이 「오늘 하루 고생하셨어요!」로 바뀐다
     el.textContent = fmtLeft(s);
   }
   function cdStart(){ if (!cdTimer) cdTimer = setInterval(cdTick, 1000); }
@@ -2476,12 +2566,12 @@ window.dispatchEvent(new Event('fb-ready'));
       // 처리할 시간대가 없으면 퇴근 타이머. 지난 시간대에 남은 대기는 대기 토글이 보여주므로 여기선 말하지 않는다.
       st.textContent = '';
       var left = closeLeftSec();
-      if (!all.length){ lm.className = 'leadmain num done'; lm.textContent = ''; cdStop(); }
-      else if (left > 0){
-        lm.className = 'leadmain num cdmode';
-        lm.innerHTML = '<span class="cdlab">퇴근까지</span><span class="cd" id="cdNum">' + fmtLeft(left) + '</span>';
-        cdStart();
-      } else { lm.className = 'leadmain num done'; lm.textContent = '오늘도 고생하셨습니다'; cdStop(); }
+      // ★카드는 «상태»만 말한다(① 명사형). 퇴근까지 남은 시간과 인사는 곰 말풍선이 맡는다
+      //   (2026-09-16 오너). 여기 있던 「퇴근까지 h:mm:ss」와 「오늘도 고생하셨습니다」를 옮긴 것이다.
+      //   ※「남은 예약 없음」은 2026-09-12 에 한 번 뺐던 문구다(대기 토글이 이미 그 상태를 보여줘서).
+      //     그땐 옆에 퇴근 카운트가 있어 군더더기였는데, 카운트가 곰에게 가면서 주 줄이 비어 되돌렸다.
+      lm.className = 'leadmain num done';
+      lm.textContent = all.length ? '남은 예약 없음' : '';
       ls.className = 'leadsub num';
       ls.innerHTML = all.length ? dayTally(all) : '';
     }
@@ -2544,6 +2634,7 @@ window.dispatchEvent(new Event('fb-ready'));
     // 목록
     list.innerHTML = '';
     var em = document.getElementById('emptyMsg');
+    em.classList.remove('bear');   // 곰 화면을 지나온 뒤의 「검색 결과 없음」이 곰 여백(0)을 물려받지 않게
     if (!items.length){
       if (q){
         em.classList.remove('hide');
@@ -2581,6 +2672,11 @@ window.dispatchEvent(new Event('fb-ready'));
     // 체크 직후 부분 갱신(patchStatus — 전체 기준)과 숫자가 어긋나지 않는다 (0/1 → 3/9 로 튀던 것).
     var fullAt = {};
     allGroups.forEach(function(ag){ fullAt[ag.time] = ag.items; });
+    // ★대기 보기에서 «지난 시간대»를 가려내는 기준 = 그보다 뒤의 시간대가 이미 시작됐는가.
+    //   「+20분」 같은 상수로 잘랐더니 10:23 에 10:00 대기가 사라졌다 — 방금 지난 시간대는
+    //   아직 처리할 일이다. 가게가 실제로 다음 시간대로 넘어갔는지가 기준이라야 성급하지 않다.
+    var nowM = nowMin(), lastStarted = -1;
+    allGroups.forEach(function(ag){ var m = slotMin(ag.time); if (nowM >= m && m > lastStarted) lastStarted = m; });
     groups.forEach(function(g){
       var slotAll = fullAt[g.time] || g.items;
       var pendN = tallyStatus(slotAll).pend;
@@ -2589,6 +2685,12 @@ window.dispatchEvent(new Event('fb-ready'));
         ? g.items.filter(function(it){ return it.status === 'pending'; })
         : g.items;
       if (viewMode === 'pending' && !rows.length) return;
+      // ★지난 시간대의 남은 대기는 대기 보기에 안 띄운다(오너 2026-09-16).
+      //   「메인 시간 이전 시간대에 체크 하나 안 된 것 때문에 종일 그 시간대가 떠 있지는 않게」 —
+      //   카드는 이미 「남은 예약 없음」이라 말하는데 그 밑에 세 시간 전 시간대가 남아 모순이었다.
+      //   이걸 내려야 곰(다 끝난 화면)도 나온다. 내린 행은 전체 보기·검색·진행 숫자(6/7)에 그대로 있다.
+      //   검색 중엔 안 내린다 — 찾는 사람은 어느 시간대든 다 보여야 한다.
+      if (viewMode === 'pending' && !q && slotMin(g.time) < lastStarted) return;
       pendRows += rows.length;
       var shut = q ? false : isCollapsed(g.time, pendN);
       // 완료됐는데 아직 5초 유예 중이면, 유예가 끝나는 시점에 접히도록 타이머를 걸어둔다.
@@ -2626,7 +2728,10 @@ window.dispatchEvent(new Event('fb-ready'));
     if (viewMode === 'pending' && !pendRows && !q){
       list.innerHTML = '';
       em.classList.remove('hide');
-      em.textContent = '대기 중인 팀이 없습니다';
+      // 글자 한 줄 대신 곰이 말을 건다 (.donebear 주석 참고). 남은 시간은 1초마다 cdTick 이 고친다.
+      em.className = 'empty bear';
+      em.innerHTML = doneBearHtml();
+      if (closeLeftSec()) cdStart(); else cdStop();
     }
 
     var foldBtnEl = document.getElementById('foldBtn');
@@ -4047,7 +4152,6 @@ window.dispatchEvent(new Event('fb-ready'));
   function setViewMode(m){
     if (viewMode === m) return;
     viewMode = m;
-    try { localStorage.setItem('ix-view', m); } catch(e){}
     syncViewSeg();
     openMenu = null;
     cancelAllLeaves();   // 「대기」에서 빠지려던 행이 있으면 그 타이머는 무의미 (통째로 다시 그린다)
@@ -4072,10 +4176,6 @@ window.dispatchEvent(new Event('fb-ready'));
     render();
   });
 
-  // 빌드 도장 — 테스트 사이트의 서랍 아래에만 보인다(MMDD.HHMM). 「고쳤다 / 아직 보인다」가
-  // 어긋날 때 «폰이 어느 빌드를 들고 있나»부터 확인할 수 있어야 한다. 배포 스크립트가 찍는다.
-  // 상단 배지에 붙이면 가운데 날짜를 밀어내므로(오너 2026-09-15) 거기엔 안 붙인다.
-  var BUILD_STAMP = '0916.0659';
   // 실사용이 아닌 곳(테스트·로컬·복사본)에서 열렸으면 빨간 「테스트」 배지를 켠다.
   if (IS_DEV){
     var dt = document.getElementById('devTag');
@@ -4814,7 +4914,10 @@ window.dispatchEvent(new Event('fb-ready'));
        ① 상시 라벨(화면에 붙박이는 표시) : 명사형      「연결됨」 「연결 안 됨」
        ② 끝났다는 통보(토스트)          : -됨         「명단 등록됨」 「복사됨」 「업데이트됨」
        ③ 말을 거는 문장(안내·거절)       : -습니다/-주세요 「명단이 없습니다」 「이름을 입력해 주세요」
-     새 문구를 넣을 땐 셋 중 어디인지부터 정할 것. 「인터넷이 연결되지 않았습니다」는 ③이고,
+     ④ 곰이 하는 말(말풍선 안)      : -어요       「퇴근까지 … 남았어요!」 「오늘 하루 고생하셨어요!」
+        풍선 모양이 「이건 곰이 하는 말」이라고 이미 알려 주므로 앱 목소리와 달라도 안 어긋난다.
+        ★풍선 밖에서는 절대 쓰지 않는다 — 그러면 말투가 넷으로 흩어진다.
+     새 문구를 넣을 땐 넷 중 어디인지부터 정할 것. 「인터넷이 연결되지 않았습니다」는 ③이고,
      헤더의 「연결 안 됨」은 ①이라 달라 보이는 게 맞다 — 역할이 다르지 어긋난 게 아니다. */
   function toast(msg){
     var t = document.getElementById('toast');
