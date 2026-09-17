@@ -1333,7 +1333,7 @@ window.addEventListener('pageshow', remeasureSbcut);
        예전의 --kb 이동은 필요 없다. */
   }
   .dialog h3{margin:0 0 4px;font-size:17px;font-weight:800;letter-spacing:-.02em;line-height:1.35;white-space:pre-line}
-  /* 같은 막에 뜨는 형제 창(룰렛)의 .rltsub 와 같은 크기·색. 아래 여백은 안 준다
+  /* 같은 막에 뜨는 형제 창(룰렛)의 안내 줄(.rltresult)과 같은 크기·색. 아래 여백은 안 준다
      — 인접 마진 상쇄로 .dbtn 의 margin-top 에 먹혀 무의미하다. */
   .dialog .dlgnote{margin:0;font-size:13px;line-height:1.5;color:var(--dim)}   /* 보조 설명 = 13 (시트 안내문과 같은 크기) */
   .dbtn{display:flex;gap:8px;margin-top:14px}
@@ -1369,25 +1369,39 @@ window.addEventListener('pageshow', remeasureSbcut);
      전역의 !important 에 밀려 죽는다. 왜 예외인지는 그 자리 주석 참고. */
 
   /* ---------- 화장실 청소 룰렛 (이스터에그) ----------
-     ★🚽 는 «앱 전체에서 유일한 이모지»다 (제목·결과 두 곳). 본 화면의 온기는 곰이 지고 글은
-       이모지를 안 쓰는데, 룰렛만 예외다 — 위 「룰렛은 놀이라 제 곡선」과 같은 갈래의 예외이고
-       일부러 둔 것이다. 「이모지가 하나 튄다」고 지우지 말 것(2026-09-16 점검에서 명시). */
+     ★이모지는 «룰렛 안에만» 있다 — 🚽(제목·결과)와 ⚡(날벼락 결과) 둘. 본 화면의 온기는 곰이 지고
+       글은 이모지를 안 쓰는데, 룰렛만 예외다 — 위 「룰렛은 놀이라 제 곡선」과 같은 갈래의 예외이고
+       일부러 둔 것이다. 「이모지가 튄다」고 지우지 말 것(2026-09-16 점검에서 명시). */
   /* 서랍(61) 위 — 롱프레스로 열 때 빠져나가는 서랍이 룰렛 위를 스치지 않게 */
   #rltScrim{ z-index:62 }
   .rlt{
     /* 확인창(.dialog)과 «같은 판»이다 — 같은 막(.scrim) 위에 가운데 뜨는 형제라 값이 달라질 이유가 없다.
        폭 340/패딩 20/제목 아래 3 으로 각자 떠다니던 것을 확인창 값(330·19·4)에 맞췄다(2026-09-16).
        340 은 이 파일에서 짝 없이 혼자 쓰이던 유일한 폭이었다(겹창은 640·520·330 셋뿐).
-       ※.rltsub 의 아래 여백 12 는 그대로 둔다 — 확인창은 뒤에 .dbtn 이 와서 마진이 상쇄되지만
-         여기는 입력칸이 뒤따라 실제로 벌어져야 한다(위 .dialog .dlgnote 주석과 짝). */
+       ※제목 아래 여백만 확인창(4)과 다르게 12 다 — 확인창은 제목 밑에 설명이 붙지만, 룰렛은 안내문이
+         아래 상태 줄로 내려가 입력칸이 제목에 바로 붙는다. */
     width:100%;max-width:330px;
     background:var(--panel);border-radius:var(--radius);
     padding:19px 16px 16px;
     transition:transform var(--tMove) var(--ease),opacity var(--tMove) var(--ease);
     transform:translateY(clamp(calc(120px - 50vh), calc(50vh - var(--kb, 0px) - 150px), 0px));
   }
-  .rlt h3{margin:0 0 4px;font-size:17px;font-weight:800;letter-spacing:-.02em;line-height:1.35}   /* .dialog h3 와 한 값 (1.35 = 줄높이 사다리) */
-  .rltsub{margin:0 0 12px;font-size:13px;color:var(--dim)}
+  .rlt h3{margin:0 0 12px;font-size:17px;font-weight:800;letter-spacing:-.02em;line-height:1.35}   /* 크기·줄높이는 .dialog h3 와 한 값 */
+  /* 이름 자리 — 입력칸과 이름 카드 줄이 «같은 칸»에 겹쳐 있다가 서로 자리를 바꾼다 (오너 2026-09-17).
+     칠 때는 글자 입력칸만, 돌리면 입력칸이 사라지고 그 자리가 이름 카드 줄이 된다. 카드 줄을 누르면 다시 입력칸.
+     ★예전엔 입력칸 «밑에» 칩 줄이 따로 있어 첫 글자를 치는 순간 카드가 58pt 늘어났다. 칩을 입력칸 안에 넣어도
+       봤지만(칩이 되는 입력칸) 알약 안에 알약이 빽빽해 조잡했다 — 둘 다 되돌렸다.
+     카드 줄 높이 = 입력칸 높이 44 라, 2~5명이면 치는 동안에도 돌릴 때도 카드 높이가 한 치도 안 바뀐다.
+     둘 다 grid 한 칸(1/1)에 두고 visibility 로만 바꾼다 — 안 보이는 쪽도 자리를 지켜 바뀌는 순간 높이가 안 흔들린다.
+     바뀌는 모습은 JS(morph)가 그린다 — 아래 .rltface 참고. */
+  /* --morph · --morphEase = 입력칸 ↔ 카드 줄 전환의 시간·곡선. JS(morph)도 여기서 읽는다 — 값은 이 한 곳.
+     ★--tMove · --ease 의 예외다(룰렛 갈래). --ease 는 첫 프레임에 이미 32% 를 가 버려, 글자가 «미끄러지지» 않고
+       «튀었다»(시뮬레이터 영상 프레임). 옮겨 가는 게 보여야 하는 전환이라 천천히 출발하는 표준 곡선에 조금 더 길게. */
+  .rltslot{display:grid;position:relative;--morph:.28s;--morphEase:cubic-bezier(.4,0,.2,1)}
+  .rltslot > *{grid-area:1/1}
+  .rltslot > input{align-self:start}                 /* 카드가 드물게 두 줄이 돼도 입력칸은 44 그대로 */
+  .rltslot > .rltnames{position:relative;z-index:1}   /* 전환 때 면(.rltface) 위에 글자 */
+  .rltslot.board > input, .rltslot:not(.board) > .rltnames{visibility:hidden;pointer-events:none}
   .rlt input{
     width:100%;background:var(--field);color:var(--text);
     border:1px solid var(--line);border-radius:999px;
@@ -1396,22 +1410,111 @@ window.addEventListener('pageshow', remeasureSbcut);
   }
   .rlt input::placeholder{color:var(--ph);font-weight:400}
   .rlt input:focus{outline:0;border-color:color-mix(in srgb, var(--text) 30%, transparent)}
+  /* 카드 줄 — 입력칸이 «이름 수만큼 쪼개진» 꼴이다: 같은 바탕(--field)·같은 선(--line)·같은 높이(44)·같은 폭.
+     버튼(면 --btn)과 꼴이 갈려 눌러야 할 것처럼 안 보인다. 모서리 12 = 44 짜리 사각 면(칩 8 은 작은 표식용).
+     칸 수(--cols)는 JS 가 정한다 — 한 줄 최대 5, 줄 수 최소, 줄마다 고르게. 이름이 칸보다 길면 칸을 줄인다. */
   .rltnames{
-    display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 2px;
-    max-height:132px;overflow-y:auto;
-    scrollbar-width:none;
+    display:grid;grid-template-columns:repeat(var(--cols, 5), minmax(0, 1fr));gap:8px;align-content:start;   /* 8 = 버튼 줄(.dbtn) 간격 — 2명이면 카드 경계와 「닫기|돌리기」 경계가 맞는다 */
+    cursor:pointer;
   }
-  .rltnames::-webkit-scrollbar{display:none}
-  .rltnames:empty{display:none}
   .rltchip{
-    padding:7px 12px;border-radius:8px;
-    background:var(--btn);border:1px solid transparent;
-    font-size:14px;font-weight:700;color:var(--text);
+    height:44px;line-height:22px;padding:10px 6px;border-radius:12px;min-width:0;   /* 10 + 22 + 10 + 선 2 = 44 */
+    background:var(--field);border:1px solid var(--line);
+    font-size:16px;font-weight:600;color:var(--text);   /* 입력칸 글자와 같은 16·600 — 전환 때 «같은 글자»가 옮겨 가야 한다 */
+    text-align:center;white-space:nowrap;overflow:hidden;
     transition:background .03s linear,color .03s linear,border-color .03s linear,transform .26s cubic-bezier(.34,1.56,.64,1);
   }
   .rltchip.lit,.rltchip.win{ background:var(--wait);border-color:var(--wait);color:var(--onWait) }
-  .rltchip.win{ transform:scale(1.09) }   /* 감속 뒤 살짝 튕기며 안착 (back-out) */
-  .rltresult{ margin:14px 2px 2px;text-align:center;font-size:20px;font-weight:800;color:var(--wait) }
+  /* 튀는 크기는 비율이 아니라 pt 로 맞춘다 — 칸 폭이 이름 수에 따라 55~146 으로 달라, 같은 1.09 면 넓은 칸이 옆 칸에 닿는다.
+     --win = 좌우 4pt씩(간격 8 의 절반), --pop = 좌우 10pt씩. drawChips 가 칸 폭을 재서 넣는다. */
+  .rltchip.win{ transform:scale(var(--win, 1.09)) }   /* 감속 뒤 살짝 튕기며 안착 (back-out) */
+  .rltchip.hit{position:relative;z-index:1}          /* 튈 때 옆 칸 위로 */
+  /* 이름 글자는 카드 안의 한 덩어리(span) — 전환 때 이것이 입력칸 글자 자리에서 미끄러져 온다(JS morph). 길면 … */
+  .rltchip > span{display:inline-block;max-width:100%;vertical-align:top;overflow:hidden;text-overflow:ellipsis}
+  /* 전환 중(.morphing) — 이름 글자가 입력칸에서 빠져나와 자기 카드 자리로 미끄러지고, 면은 «입력칸이 먼저 흐려진 뒤
+     카드가 짙어진다»(앞 절반·뒤 절반). 글자는 끊김 없이 움직이므로 눈은 글자를 따라가고, 면은 겹치는 순간이 없다.
+     ★두 번 바꿨다(시뮬레이터 영상 프레임):
+       ① 입력칸과 카드 면을 «동시에» 엇갈려 바꿨더니 중간에 알약 테두리와 카드 테두리가 이중으로 겹쳐 보였다.
+       ② 입력칸 면을 카드 모양으로 «오려» 쪼개 봤더니(clip-path) 웹킷이 오림을 글자보다 늦게 그려 둘이 어긋났다.
+       그래서 움직임은 전부 아이폰이 따로 그리는 위치·투명도로만 한다.
+     카드 면은 JS 가 카드 자리에 따로 깐다(.rltface) — 카드 자체를 흐리면 글자까지 흐려진다.
+     입력칸은 글자만 비우고(.morphing) opacity 로 흐린다 — visibility 로 숨기면 되돌아갈 때 포커스가 안 들어가 키보드가 안 뜬다. */
+  .rltslot.morphing > input{visibility:visible;color:transparent;-webkit-text-fill-color:transparent;caret-color:transparent}
+  .rltslot.morphing:not(.board) > .rltnames, .rltslot.morphing > .rltnames{visibility:visible}   /* 앞 것은 위 :not(.board) 숨김을 이기려고 */
+  .rltslot.morphing .rltchip{background:transparent;border-color:transparent;overflow:visible;transition:none}   /* 카드 점멸용 .03s 전환이 여기 걸리면 첫 프레임에 카드 테두리가 비쳤다 */
+  .rltface{position:absolute;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background:var(--field);pointer-events:none}
+  .rltmirror{position:absolute;top:0;height:44px;line-height:44px;white-space:pre;visibility:hidden;pointer-events:none}   /* 입력칸 글자 위치를 재는 그림자 */
+  /* 상태 줄 — 안내 → 경고 → 「🚽/⚡ ○○ 당첨!」이 «한 자리»에서 바뀐다.
+     ★예전엔 안내문이 제목 아래 있고 결과는 당첨 순간 새 줄로 생겨, 카드가 위아래로 21pt 씩 벌어졌다
+       (iOS 시뮬레이터 실측, 오너 2026-09-16 「당첨 글자 나타나면서 위아래로 넓어진다」). 결과 자리를 미리
+       잡되 «빈칸»으로 보이지 않게 안내문이 그 자리를 채운다(오너가 고른 안 — 원래 배치는 그대로).
+     안내(13)와 결과(20)는 글자 크기가 달라 줄 높이를 28 로 «고정»해야 바뀔 때 한 치도 안 움직인다.
+     한 줄을 넘지 않게 nowrap — 넘치면 높이가 늘어 카드가 다시 벌어진다. */
+  .rltresult{ margin:14px 2px 2px;height:28px;display:flex;align-items:center;justify-content:center;
+              text-align:center;white-space:nowrap;font-size:13px;font-weight:400;color:var(--dim) }
+  .rltresult.warn{ color:var(--warn) }
+  .rltresult.won{ font-size:20px;font-weight:800;color:var(--wait) }
+  /* 날벼락 결과 — 빛이 걷히며 글자가 «박혀 들어온다». 사람 눈은 결국 결과 글자로 가는데, 번쩍임
+     한가운데서 조용히 바뀌면 빛이 걷혔을 때 «이미 바뀌어 있을 뿐» 뒤집히는 순간이 없었다. */
+  .rltresult.hit{animation:resultHit .46s var(--ease)}
+  @keyframes resultHit{0%{transform:scale(1.3)}100%{transform:scale(1)}}
+  /* ── 날벼락 (20%) ──
+     번쩍임은 «약하게». 세게 하면 명단도 카드 글자도 갈색으로 탁해진다(시안 비교로 확인).
+     번개는 카드 위를 지난다 — 뒤로 보내면 칩에 안 닿아 「누가 맞았나」가 흐려진다.
+     0.3초라 글자를 읽는 데는 지장이 없다. */
+  /* 번쩍임: 정점 .62 · screen · 금색. (처음엔 오너가 좋다고 한 시안 값이었고, 뒤에 «최고 기준»으로 다시
+     따져서도 이 값이 남았다.) screen 은 어두운 화면을 «빛이 비추듯» 밝히고 뒤의 윤곽을 살려 둔다.
+     섞지 않고 덮으면 금색 판이 된다.
+     ★색이 금색인 이유 — 따뜻한 흰빛(.62 · .46)과 iOS 시뮬레이터 사파리에서 정점 순간을 나란히 찍었다
+       (2026-09-16). 흰빛은 «빛»이 아니라 «안개»로 읽혔고, 바탕이 흰 번개 심 쪽으로 밝아져 번개가 묻혔다.
+     ★원칙(라이트 쪽 주석과 같은 한 줄): 번쩍임은 바탕을 «번개 심의 색 쪽으로» 옮기면 안 된다.
+       다크 = 흰 쪽이 아닌 금색으로 밝힌다 · 라이트 = 밝히지 않고 색 없이 어둡게 한다. 흰빛으로 바꾸고
+       싶어지면 이 줄부터 볼 것.
+     ★내력(2026-09-16): .13(밋밋) → .78·혼합없음(금색 판) → .62·screen. 중간의 .78 은 두 시안 파일을
+       헷갈려 «다른 시안»의 값(.92·혼합없음)을 기준으로 삼은 착각이었다. 다시 바꾸려면 그 파일부터 열 것.
+     라이트는 screen 이 흰 바탕에서 아무것도 안 해서 multiply 로 — 대신 훨씬 세게 먹어 절반으로.
+     ★라이트의 번쩍임 색은 강조색이 아니라 «색 없는 어둠»(--text = 막과 같은 가족)이다. 라이트에서 번쩍임이
+       하는 일은 밝히기가 아니라 «흰 번개가 설 하늘을 어둡게» 하는 것인데, 테라코타로 multiply 하면 화면
+       전체가 분홍 필터를 쓴 듯 탁해지고 당첨 칩·결과 글자까지 그 색에 섞여 누가 맞았는지 흐려졌다
+       (iOS 시뮬레이터 사파리로 나란히 비교, 2026-09-16). 어둠만 깔면 강조색이 제 색을 지킨다.
+     번쩍임은 «한 번»뿐이다 — 넓은 면이 1초에 3회 넘게 번쩍이면 광과민성 발작 위험(WCAG 2.3.1). */
+  .rltflash{position:absolute;inset:0;background:var(--wait);opacity:0;pointer-events:none;z-index:64;mix-blend-mode:screen}
+  html[data-theme="light"] .rltflash{mix-blend-mode:multiply;--flashK:.5;background:var(--text)}
+  .rltsky{position:absolute;inset:0;pointer-events:none;z-index:65;opacity:0}
+  .rltsky path{stroke:none}          /* 선이 아니라 «채운 띠» — 굵기가 변해야 끝이 뾰족해진다 */
+  /* 세 겹: 어두운 윤곽 → 색 번짐 → 밝은 심.
+     ★윤곽은 «라이트 전용»이다. 번개의 대부분은 어두운 막 위를 지나가지만 마지막 구간이 흰 카드
+       위를 지나는데, 거기서 거의 흰 심이 바탕에 묻혀 «어디를 때렸는지»가 사라졌다(실기 확인).
+       심을 어둡게 바꾸면 반대로 막 위에서 안 보인다 — 그래서 심은 그대로 두고 윤곽만 깐다.
+       다크에서는 어두운 바탕 위 어두운 선이라 있어도 안 보이므로 아예 끈다. */
+  /* ★번짐은 CSS filter:blur() 가 아니라 SVG <feGaussianBlur> 다(필터는 drawBolt 가 <defs> 에 만든다).
+       웹킷(아이폰 사파리)은 SVG «안쪽» 요소에 CSS filter 를 적용하지 않는다 — iOS 시뮬레이터 사파리
+       26.5 에서 path 에도 g 에도 안 번지고 딱딱한 띠로 나왔다(2026-09-16). 크롬은 번져서 한동안 몰랐다.
+     불투명도·번짐은 «묶음»에 건다 — 가지가 본줄기와 겹치는 자리가 두 번 칠해져 진해지지 않고 한 덩어리로 번진다. */
+  .rltsky .bhl{opacity:.20}                 /* 넓게 퍼지는 후광 — 있고 없고가 «존재감»을 가른다 */
+  .rltsky .bgl{opacity:.45}
+  .rltsky .bhalo, .rltsky .bglow{fill:var(--wait)}
+  .rltsky .bshade{fill:#1a1208;opacity:0}
+  html[data-theme="light"] .rltsky .bshade{opacity:.72}
+  .rltsky .bcore{fill:#fff6e0}
+  html[data-theme="light"] .rltsky .bcore{fill:#fffaf2}
+  /* 맞은 칩: 튀면서 «달궈졌다 식는다».
+     ★한때 둘레에 빛을 번지게(box-shadow) 했다가 뺐다(오너 2026-09-16 「촌스럽다」). 두 가지 이유다 —
+       ① 보기에 싸구려다 ② 그때 이름 상자가 스크롤 상자라 번진 빛이 잘려 「이름 카드가 잘린 것처럼」 보였다. */
+  .rltchip.hit{animation:boltHit .5s var(--ease)}
+  @keyframes boltHit{
+    0%  {transform:scale(var(--pop, 1.22)); background:#fff6e0; border-color:#fff6e0}
+    38% {transform:scale(.98);  background:var(--wait); border-color:var(--wait)}
+    100%{transform:scale(var(--win, 1.09)); background:var(--wait); border-color:var(--wait)}
+  }
+  /* 카드가 맞고 «내려앉았다» 잦아든다. 번개가 위에서 오므로 세로 — 잠금 흔들림(lockshake)과 같은 감쇠 결.
+     .rlt 의 평소 transform(키보드 올림)을 덮지만, 돌리기 시작에 입력칸을 blur 하므로 이 순간 --kb 는 0 이다. */
+  /* 맞는 «순간» 최대로 내려앉고 잦아든다. 예전엔 최대에 닿는 데 58ms 걸려 타격이 아니라 흔들거림이었다. */
+  .rlt.jolt{animation:boltJolt .42s cubic-bezier(.22,1,.36,1)}
+  @keyframes boltJolt{
+    0%{transform:translateY(7px)}  22%{transform:translateY(-4px)} 44%{transform:translateY(2.5px)}
+    66%{transform:translateY(-1.2px)} 84%{transform:translateY(.5px)} 100%{transform:translateY(0)}
+  }
   .dbtn #rltGo{background:var(--wait);color:var(--onWait)}
   .dbtn #rltGo:disabled{opacity:.55;cursor:default}
 
@@ -1610,12 +1713,19 @@ window.addEventListener('pageshow', remeasureSbcut);
 </div>
 
 <div class="scrim hide" id="rltScrim">
+  <!-- 날벼락: 번쩍임 막 + 번개. 카드가 아니라 «막»에 그린다 — 카드(330×280)는 번개를 담기엔 너무
+       작아 가지를 붙일 자리가 없고, 카드 안에서 시작하면 어디서 온 건지 안 읽힌다. 막에 그리면
+       화면 꼭대기에서 400px 넘게 내려온다. 라이트 모드가 되는 이유도 이것이다 — 막은 두 테마 모두
+       어두우므로(--scrim) 번개가 늘 어두운 바탕 위에 놓인다. -->
+  <div class="rltflash" id="rltFlash"></div>
+  <svg class="rltsky" id="rltSky" aria-hidden="true"></svg>
   <div class="rlt">
     <h3>🚽 화장실 청소 룰렛</h3>
-    <p class="rltsub">이름을 띄어쓰기로 구분해 입력해 주세요</p>
-    <input type="text" id="rltInput" placeholder="예: 동현 동주 동희 동욱" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-    <div class="rltnames" id="rltNames"></div>
-    <p class="rltresult hide" id="rltResult"></p>
+    <div class="rltslot" id="rltSlot">
+      <input type="text" id="rltInput" placeholder="예: 동현 동주 동희 동욱" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+      <div class="rltnames" id="rltNames" role="button" aria-label="이름 고치기"></div>
+    </div>
+    <p class="rltresult" id="rltResult" aria-live="polite">이름은 띄어쓰기로 구분해 주세요</p>
     <div class="dbtn">
       <button type="button" id="rltClose">닫기</button>
       <button type="button" id="rltGo">돌리기</button>
@@ -4026,7 +4136,7 @@ window.dispatchEvent(new Event('fb-ready'));
     if (!state || !state.items.length){ closeDrawer(); toast('명단이 없습니다'); return; }   // backDone 까지 — 유령 뒤로가기 기록 방지
     // 초기화도 «통째 교체»(set)라 끊긴 동안엔 막는다 — applyPaste 와 같은 이유.
     if (!connReady()){ closeDrawer(); toast(MSG_OFF); return; }
-    // 안내문은 조작법 하나만 — 앱의 다른 창 보조문(#pasteHint·.rltsub)과 같은 규칙이다.
+    // 안내문은 조작법 하나만 — 앱의 다른 창 보조문(#pasteHint·룰렛 안내 줄)과 같은 규칙이다.
     // 건수는 묻는 자리(안내문)가 아니라 끝난 자리(토스트)에 둔다: 「명단 초기화」를 누른
     // 사람에게 건수는 결정을 바꾸지 않지만, 끝난 뒤엔 무엇이 사라졌는지 알려 주는 영수증이 된다.
     confirmDlg('오늘 명단을 초기화할까요?', function(){
@@ -4326,6 +4436,46 @@ window.dispatchEvent(new Event('fb-ready'));
   //    곡선 초반이 STEP_MS 바닥보다 빨라 감속이 「쭉 빠르다 뚝」이 된다. 아래로 묶으면 곡선이
   //    전 구간을 지배해 인원수와 무관하게 처음부터 끝까지 매끄럽게 감속한다.
   //  - (from + steps) % n === winner 는 두 경우 모두 성립.
+  // 두 점 사이를 꺾인 선으로.
+  // ★마디를 «고르게» 나누면 기계로 그은 지그재그가 된다 — 길이를 제각각으로 뽑아야 번개로 보인다.
+  // ★흔들림은 위가 크고 끝으로 갈수록 준다. 위는 제멋대로 갈라져 내려오고 끝은 목표에 정확히 꽂힌다.
+  function boltPts(x0, y0, x1, y1, segs, jit){
+    var ts = [0], acc = 0, i, t, taper, p = [];
+    for (i = 0; i < segs; i++){ acc += .55 + Math.random() * .9; ts.push(acc); }
+    for (i = 0; i < ts.length; i++){
+      t = ts[i] / acc;
+      if (i === ts.length - 1){ p.push([x1, y1]); break; }
+      taper = Math.pow(1 - t, .85);
+      p.push([x0 + (x1 - x0) * t + (Math.random() * 2 - 1) * jit * taper,
+              y0 + (y1 - y0) * t + (Math.random() * 2 - 1) * jit * .3]);
+    }
+    return p;
+  }
+  // 점을 따라 «폭이 변하는 띠»를 만든다 — 선(stroke)은 굵기가 한 값이라 끝이 뾰족해지지 않는다.
+  // 앞 18%는 굵기를 지키고 뒤에서 좁혀, 위는 굵고 끝만 바늘처럼 꽂힌다.
+  function boltD(p, wTop, wTip){
+    var n = p.length, L = [], Rt = [], i, t, k, w, a, b, dx, dy, len;
+    for (i = 0; i < n; i++){
+      t = i / (n - 1);
+      k = Math.pow(Math.max(0, (t - .18) / .82), 1.7);
+      w = (wTop + (wTip - wTop) * k) / 2;
+      a = p[Math.max(0, i - 1)]; b = p[Math.min(n - 1, i + 1)];
+      dx = b[0] - a[0]; dy = b[1] - a[1]; len = Math.sqrt(dx * dx + dy * dy) || 1; dx /= len; dy /= len;
+      L.push([p[i][0] - dy * w, p[i][1] + dx * w]);
+      Rt.push([p[i][0] + dy * w, p[i][1] - dx * w]);
+    }
+    Rt.reverse();
+    return 'M' + L.concat(Rt).map(function(q){ return q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join('L') + 'Z';
+  }
+
+  // 날벼락이 넘어갈 사람. «자기 자신만 빼고» 균등하게 — n-1 중 하나를 뽑고 자기 번호 이상이면 한 칸 민다.
+  // 이 균등성이 공정성의 전부다: P(최종 x) = .8·(1/n) + .2·[(n-1)/n · 1/(n-1)] = 1/n.
+  function twistPick(n, old, rnd){
+    var k = Math.floor((rnd === undefined ? Math.random() : rnd) * (n - 1));
+    if (k >= n - 1) k = n - 2;          // rnd 가 1 이어도 범위를 안 넘게
+    return k >= old ? k + 1 : k;
+  }
+
   var RLT_BASE = 16, RLT_STEP_CAP = 22;
   function rltSteps(n, winner, from){
     var steps = RLT_BASE + (((winner - from - RLT_BASE) % n) + n) % n;
@@ -4336,10 +4486,10 @@ window.dispatchEvent(new Event('fb-ready'));
     var rltScrim = document.getElementById('rltScrim');
     var inp = document.getElementById('rltInput');
     var namesBox = document.getElementById('rltNames');
+    var slot = document.getElementById('rltSlot');
     var result = document.getElementById('rltResult');
     var goBtn = document.getElementById('rltGo');
-    var sub = rltScrim.querySelector('.rltsub');
-    var SUB_TEXT = sub.textContent;
+    var SUB_TEXT = result.textContent;   // 상태 줄의 기본 문구(안내문) — 마크업에 적힌 그대로
     var spinning = false, gen = 0;
 
     function buzz(pattern){ try { navigator.vibrate && navigator.vibrate(pattern); } catch(e){} }
@@ -4352,22 +4502,142 @@ window.dispatchEvent(new Event('fb-ready'));
         .map(function(s){ return s.trim(); })
         .filter(function(s){ return s && !seen[s] && (seen[s] = true); });
     }
+    // 카드 줄을 그린다. 보이는 상태(.board)에서 불러야 칸 폭을 잴 수 있다.
     function drawChips(list){
       namesBox.innerHTML = '';
+      var n = list.length;
+      if (!n) return;
       list.forEach(function(nm){
-        var c = document.createElement('span');
+        var c = document.createElement('span'), t = document.createElement('span');
         c.className = 'rltchip';
-        c.textContent = nm;
+        t.textContent = nm;
+        c.appendChild(t);
         namesBox.appendChild(c);
       });
+      // 한 줄 최대 5칸 · 줄 수 최소 · 줄마다 고르게 (6 → 3+3, 7 → 4+3). 이름이 칸보다 길어 잘리면 칸을 하나씩 줄인다.
+      var cols = Math.ceil(n / Math.ceil(n / 5));
+      function fits(){
+        for (var i = 0; i < namesBox.children.length; i++){
+          var t = namesBox.children[i].firstChild;
+          if (t.scrollWidth > t.clientWidth) return false;
+        }
+        return true;
+      }
+      do namesBox.style.setProperty('--cols', cols); while (!fits() && --cols >= 1);
+      var w = namesBox.firstChild.getBoundingClientRect().width;
+      if (w){
+        namesBox.style.setProperty('--win', (1 + 8 / w).toFixed(4));
+        namesBox.style.setProperty('--pop', (1 + 20 / w).toFixed(4));
+      }
     }
-    // 안내문 한 줄을 안내/경고로 바꾼다 (토스트는 룰렛 스크림 뒤라 안 보임)
+    // 입력칸 ↔ 카드 줄. 카드 줄에서 입력칸으로 갈 땐 페이드가 끝난 뒤 카드를 비운다
+    // — 이름이 많아 두 줄이던 카드가 숨은 채 자리를 차지해 입력칸 밑이 비지 않게.
+    var clearTimer = 0;
+    function board(on){
+      clearTimeout(clearTimer);
+      slot.classList.toggle('board', on);
+      // 전환(morph) 중이면 카드는 morph 가 글자가 닿는 순간 치운다 — 여기서 먼저 치우면 입력칸 글자가 아직 비어 있어
+      // 잠깐 빈 칸이 보였다(시뮬레이터 영상 150ms).
+      if (!on && !slot.classList.contains('morphing')) clearTimer = setTimeout(function(){ if (!slot.classList.contains('board')) namesBox.innerHTML = ''; }, MORPH_MS);
+    }
+
+    // ── 입력칸 ↔ 카드 줄 전환 ──
+    // 이름 글자가 입력칸 제자리에서 출발해 자기 카드 자리로 미끄러진다(오너 2026-09-17 「이름 자체가 카드가 되는 느낌」).
+    // 고치러 갈 땐 같은 길을 거꾸로. 꼴과 이렇게 된 까닭은 CSS .morphing 주석 참고.
+    var slotCs = getComputedStyle(slot);
+    var MORPH_MS = parseFloat(slotCs.getPropertyValue('--morph')) * 1000 || 280;   // CSS .rltslot 의 --morph
+    var MORPH_EASE = slotCs.getPropertyValue('--morphEase').trim() || 'ease-in-out';
+    var morphing = null;
+    function endMorph(){
+      if (!morphing) return;
+      cancelAnimationFrame(morphing.raf);
+      clearTimeout(morphing.timer);
+      morphing.anims.forEach(function(a){ a.cancel(); });
+      morphing.faces.forEach(function(f){ if (f.parentNode) f.parentNode.removeChild(f); });
+      morphing.styled.forEach(function(el){ el.style.opacity = ''; el.style.transform = ''; });
+      // 카드 면이 돌아올 때도 .03s 전환 없이 — 깔아 둔 면(.rltface)을 치우는 같은 프레임에 카드 면이 온전히 있어야 한다
+      var tiles = namesBox.children, i;
+      for (i = 0; i < tiles.length; i++) tiles[i].style.transition = 'none';
+      slot.classList.remove('morphing');
+      void namesBox.offsetWidth;
+      for (i = 0; i < tiles.length; i++) tiles[i].style.transition = '';
+      morphing = null;
+    }
+    // 입력칸 속 이름마다 글자 자리(슬롯 기준 왼쪽 x · 세로 가운데 cy). 같은 이름이 또 있으면 처음 것.
+    // 입력칸과 같은 글꼴의 그림자 줄을 겹쳐 놓고 잰다. 칸 밖으로 스크롤돼 안 보이는 글자는 칸 끝에서 출발한다.
+    function wordSpots(){
+      var cs = getComputedStyle(inp), m = document.createElement('span'), first = Object.create(null), out = Object.create(null);
+      m.className = 'rltmirror';
+      m.style.fontFamily = cs.fontFamily; m.style.fontSize = cs.fontSize; m.style.fontWeight = cs.fontWeight;
+      m.style.letterSpacing = cs.letterSpacing;
+      m.style.left = (inp.clientLeft + parseFloat(cs.paddingLeft) - inp.scrollLeft) + 'px';
+      inp.value.split(/([\s,]+)/).forEach(function(tok, i){
+        if (i % 2){ m.appendChild(document.createTextNode(tok)); return; }   // 홀수 = 띄어쓰기·쉼표
+        if (!tok) return;
+        var w = document.createElement('span');
+        w.textContent = tok;
+        m.appendChild(w);
+        if (!first[tok]) first[tok] = w;
+      });
+      slot.appendChild(m);
+      var sr = slot.getBoundingClientRect(), ir = inp.getBoundingClientRect();
+      for (var k in first){
+        var r = first[k].getBoundingClientRect();
+        out[k] = { x: Math.max(ir.left, Math.min(r.left, ir.right - r.width)) - sr.left, cy: r.top + r.height / 2 - sr.top };
+      }
+      slot.removeChild(m);
+      return out;
+    }
+    function morph(toBoard, done){
+      endMorph();
+      slot.classList.add('morphing');
+      var spots = wordSpots(), sr = slot.getBoundingClientRect();
+      var faces = [], styled = [inp], jobs = [];
+      // 앞 절반에 사라지는 쪽 · 뒤 절반에 나타나는 쪽 — 면이 겹치는 프레임이 없다
+      var OUT = [{ opacity: 1 }, { opacity: 0, offset: .5 }, { opacity: 0 }];
+      var IN  = [{ opacity: 0 }, { opacity: 0, offset: .5 }, { opacity: 1 }];
+      jobs.push([inp, toBoard ? OUT : IN, 'linear']);
+      inp.style.opacity = toBoard ? 1 : 0;
+      [].forEach.call(namesBox.children, function(tile){
+        var tr = tile.getBoundingClientRect(), f = document.createElement('div');
+        f.className = 'rltface';
+        f.style.left = (tr.left - sr.left) + 'px'; f.style.top = (tr.top - sr.top) + 'px';
+        f.style.width = tr.width + 'px'; f.style.height = tr.height + 'px';
+        f.style.opacity = toBoard ? 0 : 1;
+        faces.push(f); styled.push(f);
+        jobs.push([f, toBoard ? IN : OUT, 'linear']);
+        var t = tile.firstChild, at = spots[t.textContent];
+        if (at){
+          var r = t.getBoundingClientRect();
+          var away = 'translate(' + (at.x - (r.left - sr.left)) + 'px,' + (at.cy - (r.top + r.height / 2 - sr.top)) + 'px)';
+          t.style.transform = toBoard ? away : 'none';
+          styled.push(t);
+          jobs.push([t, toBoard ? [{ transform: away }, { transform: 'none' }] : [{ transform: 'none' }, { transform: away }], MORPH_EASE]);
+        }
+      });
+      faces.forEach(function(f){ slot.insertBefore(f, namesBox); });
+      // 출발 자리는 인라인 스타일로 먼저 그려 두고, 두 프레임 뒤에 움직임을 건다. 키보드가 오르내리는 순간 아이폰이 잠깐
+      // 멈추는데, 곧바로 출발시키면 그동안의 움직임이 «이미 지나간» 채로 그려져 글자가 미끄러지지 않고 튀었다(시뮬레이터 영상).
+      var m = morphing = { anims: [], faces: faces, styled: styled, raf: 0, timer: 0 };
+      m.raf = requestAnimationFrame(function(){ m.raf = requestAnimationFrame(function(){
+        jobs.forEach(function(j){ m.anims.push(j[0].animate(j[1], { duration: MORPH_MS, easing: j[2], fill: 'forwards' })); });
+        m.timer = setTimeout(function(){
+          if (!toBoard) namesBox.innerHTML = '';   // 글자가 입력칸 자리에 닿은 순간 카드를 치우고 진짜 입력칸 글자를 보인다
+          endMorph();
+          if (done) done();
+        }, MORPH_MS);
+      }); });
+    }
+    // 상태 줄을 안내/경고로 되돌린다 (토스트는 룰렛 스크림 뒤라 안 보임). 결과(.won)·타격(.hit)도 여기서 뗀다
+    // — .hit 이 남으면 다음 날벼락 전에 평범한 결과까지 튀어나온다.
     function say(msg, warn){
-      sub.textContent = msg || SUB_TEXT;
-      sub.style.color = warn ? 'var(--warn)' : '';
+      var t = msg === undefined ? SUB_TEXT : msg;   // '' = 비우기
+      result.classList.remove('won', 'hit');
+      result.classList.toggle('warn', !!warn);
+      if (result.textContent !== t) result.textContent = t;   // 같은 말을 다시 쓰면 낭독기가 타자마다 되읽는다
     }
     function reset(){
-      result.classList.add('hide');
+      sky.innerHTML = '';                  // 이전 번개가 남아 있지 않게
       goBtn.textContent = '돌리기';
       goBtn.disabled = false;
       inp.disabled = false;
@@ -4375,8 +4645,10 @@ window.dispatchEvent(new Event('fb-ready'));
       say();
     }
     function open(){
+      endMorph();
       inp.value = '';
-      drawChips([]);          // 빈 입력 → 칩 영역도 비움
+      board(false);
+      namesBox.innerHTML = '';
       reset();
       rltScrim.classList.remove('hide');
       backOpen('roulette', hide);
@@ -4387,6 +4659,99 @@ window.dispatchEvent(new Event('fb-ready'));
     // 흐름은 인원수·당첨자와 무관하게 늘 같다:
     //   빠른 회전 → ease-out 감속 → 당첨칸 안착 → HOLD_MS 정지 → 결과·바운스
     // 감속 곡선 p·(2−p) 이 마지막 칸에 닿는 지점이 늘 ~85%p 라, 도는 시간은 인원수와 무관하게 일정하다.
+    // ── 날벼락 ──
+    // 20%로 당첨자가 «다른 사람»에게 넘어간다(오너 2026-09-17 — 10% 에서 올림). 공정성은 안 깨진다 —
+    // 새 당첨자를 나머지 n-1 명 중 균등하게 뽑으므로 최종 확률은 그대로 1/n 이다:
+    //   P(x) = .8·(1/n) + .2·[ (n-1)/n · 1/(n-1) ] = .8/n + .2/n = 1/n
+    // 바뀌는 순간은 «빛 안»에 숨긴다 — 불이 옮겨가는 걸 보여주면 「덜 돌았나」가 되고,
+    // 빛이 걷혔을 때 이미 옮겨가 있으면 「맞았다」가 된다.
+    var TWIST_P = 0.20;
+    var BOLT_SEGS = 16, BOLT_JIT = 30, BOLT_BRANCHES = 3, BOLT_MS = 340;
+    var sky = document.getElementById('rltSky');
+    var flash = document.getElementById('rltFlash');
+    function calm(){   // 움직임을 줄이라고 한 기기 — 번쩍임·번개를 빼고 결과만 바꾼다
+      try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){ return false; }
+    }
+    function drawBolt(target){
+      var sr = rltScrim.getBoundingClientRect(), tr = target.getBoundingClientRect();
+      var tx = tr.left - sr.left + tr.width / 2, ty = tr.top - sr.top + tr.height / 2;
+      sky.innerHTML = '';
+      sky.setAttribute('viewBox', '0 0 ' + sr.width + ' ' + sr.height);
+      // 시작점을 목표 바로 위로 조금만 흩는다 — 멀리서 비스듬히 오면 카드 글자를 길게 가로지른다
+      var main = boltPts(tx + (Math.random() * 2 - 1) * 46, -8, tx, ty, BOLT_SEGS, BOLT_JIT);
+      var pts = [main], b, i, bx, by, len, dir;
+      // 가지는 «위쪽 3분의 2»에서만 갈라진다. 꽂히는 지점 근처에서 갈라지면 어디를 때렸는지 흐려지고,
+      // 진짜 번개도 아래로 갈수록 한 줄기로 모인다. 길이도 늘렸다 — 짧으면 가시처럼 보인다.
+      var top = Math.max(2, Math.floor(main.length * .66));
+      for (b = 0; b < BOLT_BRANCHES; b++){
+        i = 1 + Math.floor(Math.random() * (top - 1));
+        bx = main[i][0]; by = main[i][1];
+        len = 42 + Math.random() * 52; dir = Math.random() < .5 ? -1 : 1;
+        pts.push(boltPts(bx, by, bx + dir * len * (.7 + Math.random() * .7),
+                         by + len * (.45 + Math.random() * .7), 5, BOLT_JIT * .55));
+      }
+      // 겹마다 [머리 폭, 끝 폭] — 본줄기 / 가지. 심이 두꺼워야 번쩍임 «정점»에도 번개가 보인다.
+      var W = { bhalo: [[15.3, 4.8], [8.5, 2.4]], bshade: [[6.4, 2.6], [3.4, 1.3]],
+                bglow: [[9, 2.8], [5, 1.4]],      bcore: [[3.8, 1.7], [2.2, 1.0]] };
+      // 세 묶음으로 나눠 담는다 — «쌓이는 차례»를 가지마다가 아니라 전체로 맞추고, 번짐을 묶음째 걸려고.
+      // 후광 → 번짐(모든 가지) → 윤곽·심(모든 가지). 가지마다 쌓으면 다음 가지의 번짐이 앞 가지의 심을
+      // 덮고, 윤곽이 번짐 «아래»에 깔려 라이트 카드에서 테가 묻힌다.
+      var NS = 'http://www.w3.org/2000/svg';
+      function mk(tag, attrs){
+        var e = document.createElementNS(NS, tag), a;
+        for (a in attrs) e.setAttribute(a, attrs[a]);
+        return e;
+      }
+      // 번짐 필터 둘. 영역은 하늘 전체(userSpaceOnUse) — 도형 기준으로 잡으면 모양·크기에 따라 번짐이 잘린다.
+      var defs = mk('defs', {});
+      [['rltBlurHalo', 13], ['rltBlurGlow', 5]].forEach(function(f){
+        var fe = mk('filter', { id: f[0], filterUnits: 'userSpaceOnUse', x: 0, y: 0, width: sr.width, height: sr.height });
+        fe.appendChild(mk('feGaussianBlur', { stdDeviation: f[1] }));
+        defs.appendChild(fe);
+      });
+      var hl = mk('g', { 'class': 'bhl', filter: 'url(#rltBlurHalo)' });
+      var gl = mk('g', { 'class': 'bgl', filter: 'url(#rltBlurGlow)' });
+      var co = mk('g', { 'class': 'bco' });
+      sky.appendChild(defs); sky.appendChild(hl); sky.appendChild(gl); sky.appendChild(co);
+      pts.forEach(function(q, k){
+        ['bhalo', 'bglow', 'bshade', 'bcore'].forEach(function(cls){
+          if (cls === 'bhalo' && k) return;                            // 후광은 본줄기만
+          var w = W[cls][k ? 1 : 0];
+          (cls === 'bhalo' ? hl : cls === 'bglow' ? gl : co)
+            .appendChild(mk('path', { d: boltD(q, w[0], w[1]), 'class': cls }));
+        });
+      });
+    }
+    function strike(target){
+      drawBolt(target);
+      // 깜빡임 = 오너가 좋다고 한 시안의 리듬 «켜짐 → .25 로 흐려짐 → 켜짐 → 꺼짐» (0.34초).
+      // 그 시안과 다른 점은 딱 하나 — 번개가 0 에서 올라오지 않고 «바로 켜진다». 번개가 먼저 서고
+      // 빛이 한 박자 뒤(62ms)에 퍼져야 번개가 빛에 안 씻긴다(프레임을 멈춰 재서 확인).
+      // ★잔상(심만 남아 1초 가까이 식는 것)을 한때 넣었다가 뺐다(2026-09-16) — 길이가 세 배가 되며
+      //   「쾅」이 「웅~」이 됐다. 좋다고 한 시안에도 없었다. 번개는 짧아야 번개답다.
+      // ★easing 은 반드시 'linear'. 타이밍 쪽에 'ease-out' 을 주면 «타임라인 전체»가 앞으로 당겨져
+      //   62ms 로 잡은 정점이 35ms 로 와 버린다. 곡선은 키프레임 자리로 만든다.
+      sky.animate([{opacity:1,offset:0},{opacity:1,offset:70/BOLT_MS},{opacity:.25,offset:150/BOLT_MS},
+                   {opacity:1,offset:230/BOLT_MS},{opacity:0,offset:1}],
+                  { duration: BOLT_MS, easing: 'linear' });
+      // 번쩍임: 시안(.62 · 약 0.43초, 빠르게 오르고 길게 식음)을 linear 키프레임으로 옮긴 것
+      // ★라이트는 번쩍임을 «처음부터» 같이 건다. 라이트의 번쩍임은 multiply 라 화면을 밝히는 게 아니라
+      //   «어둡게» 한다 — 번개를 씻어내기는커녕 흰 번개가 설 어두운 하늘을 깔아 준다. 다크처럼 40ms 를
+      //   기다리면 그동안 흰 번개가 밝은 막 위에서 거의 안 보였다(iOS 시뮬레이터 사파리로 확인).
+      var fk = parseFloat(getComputedStyle(flash).getPropertyValue('--flashK')) || 1;
+      var lightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+      var f0 = lightTheme ? 0 : 40, fPeak = lightTheme ? 22 : 62;
+      flash.animate([{opacity:0,offset:0},{opacity:0,offset:f0/430},{opacity:.62 * fk,offset:fPeak/430},
+                     {opacity:.40 * fk,offset:110/430},{opacity:.16 * fk,offset:220/430},{opacity:0,offset:1}],
+                    { duration: 430, easing: 'linear' });
+      var card = rltScrim.querySelector('.rlt');
+      setTimeout(function(){          // 빛이 퍼지기 시작하는 순간(40ms) = 맞는 순간. 번개만 보이는 첫 40ms 뒤다.
+        if (rltScrim.classList.contains('hide')) return;   // 그 사이 닫혔으면 흔들지도 울리지도 않는다
+        card.classList.remove('jolt'); void card.offsetWidth; card.classList.add('jolt');
+        buzz([0, 55, 45, 95]);        // 「쾅-쿵」 두 방. ※아이폰은 진동 API 가 없어 안 울린다(안드로이드만)
+      }, 40);
+    }
+
     var SPIN_MS = 2000;   // 회전이 멎기까지 (실제 정지는 그 ~85% 지점 + HOLD_MS ≈ 총 2초)
     var STEP_MS = 45;     // 가장 빠른 구간의 칸 간격 — CSS 전환(0.03s)보다 커야 두 칸이 겹쳐 안 빛난다
     var HOLD_MS = 300;    // 당첨칸에 멈춰 있는 시간 (결과가 뜨기 전)
@@ -4394,13 +4759,18 @@ window.dispatchEvent(new Event('fb-ready'));
     function spin(){
       if (spinning) return;
       var ns = names();
-      if (ns.length < 2){ say('이름을 2명 이상 입력해 주세요', true); return; }
+      if (ns.length < 2){ say('2명 이상 입력해 주세요', true); return; }
       spinning = true;
+      sky.innerHTML = '';             // 「다시」를 번개 도중에 누르면 옛 번개가 새 회전 위에 겹친다
       inp.blur();                     // 키보드 내려 칩 안 가리게
       inp.disabled = true;            // 스핀 중 이름·키보드 못 건드리게
       goBtn.disabled = true;
-      result.classList.add('hide');
-      say();
+      // 도는 동안 상태 줄 = 「돌리는 중…」(말투 ① 명사형 — 버튼 「돌리기」와 같은 말). 멎으면 그 자리에 결과가 뜬다.
+      // ★비워 뒀더니 2초간 구멍처럼 보였다. 「이름을 누르면 고칠 수 있어요」도 둬 봤는데 도는 동안(누를 수 없을 때)만
+      //   보이다 결과에 덮여, 정작 누를 수 있을 땐 안 보였다(2026-09-17 점검).
+      say('돌리는 중…');
+      var fromText = !slot.classList.contains('board') && !calm();
+      board(true);                    // 입력칸 → 카드 줄
       drawChips(ns);
       var chips = namesBox.querySelectorAll('.rltchip');
       var n = ns.length;
@@ -4411,7 +4781,6 @@ window.dispatchEvent(new Event('fb-ready'));
       var myGen  = ++gen;
 
       var t0 = 0, at = 0, done = 0, lit = from, landed = 0;
-      chips[from].className = 'rltchip lit';                         // 시작칸 점등
       function frame(now){
         if (myGen !== gen) return;   // 닫혔거나 다시 돌렸으면 이 루프 폐기
         if (!t0){ t0 = now; at = now - STEP_MS; }
@@ -4434,18 +4803,69 @@ window.dispatchEvent(new Event('fb-ready'));
         if (!landed) landed = now;
         if (now - landed < HOLD_MS){ requestAnimationFrame(frame); return; }
         chips[winner].className = 'rltchip win';
+        result.classList.remove('warn');
+        result.classList.add('won');
         result.textContent = '🚽 ' + ns[winner] + ' 당첨!';
-        result.classList.remove('hide');
+        buzz([25, 45, 25]);
+        if (n > 1 && Math.random() < TWIST_P) twist(myGen, chips, ns, winner);
+        else finish();
+      }
+      function finish(){
         goBtn.disabled = false;
         goBtn.textContent = '다시';
         inp.disabled = false;
         spinning = false;
-        buzz([25, 45, 25]);
       }
-      requestAnimationFrame(frame);
+      // 결과가 뜬 뒤 잠깐 두었다가 번개가 «다른 사람»을 내려친다.
+      // 그 사이에도 spinning 은 true — 닫기·다시 돌리기·이름 고치기를 막는다.
+      function twist(myGen2, chips2, ns2, old){
+        var nw = twistPick(ns2.length, old);
+        setTimeout(function(){
+          if (myGen2 !== gen) return;              // 그 사이 닫혔으면 아무것도 안 한다
+          if (!calm()) strike(chips2[nw]);
+          // 바뀌는 순간을 빛 «안»에 숨긴다 — 번쩍임 정점(62ms)에 맞춘다
+          setTimeout(function(){
+            if (myGen2 !== gen) return;
+            chips2[old].className = 'rltchip';
+            chips2[nw].className = 'rltchip win hit';
+            result.textContent = '⚡ ' + ns2[nw] + ' 당첨!';
+            result.classList.remove('hit'); void result.offsetWidth; result.classList.add('hit');
+            finish();
+          }, calm() ? 0 : 62);
+        }, 780);
+      }
+      function go(){
+        if (myGen !== gen) return;
+        chips[from].className = 'rltchip lit';                       // 시작칸 점등
+        requestAnimationFrame(frame);
+      }
+      if (fromText) morph(true, go);  // 글자가 카드로 옮겨 간 «뒤에» 불을 켠다
+      else go();
     }
 
-    inp.addEventListener('input', function(){ if (!spinning){ reset(); drawChips(names()); } });
+    inp.addEventListener('input', function(){ if (!spinning) reset(); });
+    inp.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); inp.blur(); } });   // 파란 ✓ = 키보드 내리기
+    // 카드 줄을 누르면 입력칸으로 돌아가 이름을 고친다 (이름은 입력칸에 그대로 있다). 도는 중엔 안 된다.
+    namesBox.addEventListener('click', function(){
+      if (spinning) return;
+      // 당첨 불을 먼저 끈다 — 금색 면이 흐려지는 동안 남고, 어두운 글자(--onWait)가 바탕에 묻힌 채 움직였다
+      [].forEach.call(namesBox.children, function(c){ c.className = 'rltchip'; });
+      var anim = !calm();
+      if (anim) slot.classList.add('morphing');   // 카드 줄을 붙잡아 둔다 — board(false) 가 카드를 치우지 않게
+      board(false);
+      reset();
+      inp.focus();                    // 누른 그 순간에 — 타이머 뒤로 미루면 아이폰이 키보드를 안 띄운다
+      if (anim) morph(false);         // 포커스 «뒤에» 잰다 — 포커스가 글자를 끝으로 스크롤하면 돌아갈 자리가 바뀐다
+    });
+    // ★다시 누르면 커서가 «맨 앞»으로 가던 것 — 웹킷은 글자가 든 칸에 포커스가 들어오는 순간 커서를 0 에
+    //   두고, 손을 뗄 때(mouseup) 누른 자리로 옮긴다(iOS 시뮬레이터 로그: focus 0/11 → mouseup 11/11).
+    //   키보드가 뜨며 카드가 움직이면 누른 자리와 글자가 어긋나 그 «옮김»이 빠지고 커서가 맨 앞에 남는다
+    //   (오너 2026-09-16). 포커스 순간 끝으로 옮겨 두면, 가운데를 눌러 고칠 때는 뒤따르는 mouseup 이
+    //   그대로 그 자리로 옮기고, 옮김이 빠질 때만 맨 앞이 아니라 끝에 남는다.
+    inp.addEventListener('focus', function(){
+      var n = inp.value.length;
+      if (n) try { inp.setSelectionRange(n, n); } catch(e){}
+    });
     goBtn.addEventListener('click', spin);
     document.getElementById('rltClose').addEventListener('click', close);
     rltScrim.addEventListener('click', function(e){
@@ -4456,9 +4876,9 @@ window.dispatchEvent(new Event('fb-ready'));
       close();
     });
     // 키보드가 올라오면 iOS 가 이 고정 막을 손끝 따라 위아래로 끈다(빈 배경이 딸려 오며 창이 흔들린다).
-    // 세로로 넘칠 수 있는 곳은 이름 칩 목록뿐 — 거기서 시작한 스크롤만 통과시키고 나머지 드래그는 막는다.
+    // 창 안에 스크롤할 곳이 없으므로 드래그는 전부 막는다.
     rltScrim.addEventListener('touchmove', function(e){
-      if (!namesBox.contains(e.target)) e.preventDefault();
+      e.preventDefault();
     }, { passive: false });
 
     // 진입: 서랍 맨 위 아이콘 롱프레스 (0.65초).
@@ -5254,7 +5674,7 @@ window.dispatchEvent(new Event('fb-ready'));
       validLogDate: validLogDate, cleanLogEntry: cleanLogEntry, logIdentity: logIdentity,
       logKeyId: logKeyId, mergeLogRows: mergeLogRows,
       reportText: reportText, uniqueId: uniqueId, nextSeq: nextSeq, isCollapsed: isCollapsed,
-      rltSteps: rltSteps, wqEntry: wqEntry, computeDev: computeDev, autoCancelDue: autoCancelDue,
+      rltSteps: rltSteps, twistPick: twistPick, wqEntry: wqEntry, computeDev: computeDev, autoCancelDue: autoCancelDue,
       stalePurgeDates: stalePurgeDates, kstParts: kstParts, lateEntry: lateEntry, stampTs: stampTs,
       consts: { COLLAPSE_DELAY: COLLAPSE_DELAY, AUTO_CANCEL_MIN: AUTO_CANCEL_MIN,
                 AUTO_CANCEL_WINDOW: AUTO_CANCEL_WINDOW,
