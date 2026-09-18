@@ -538,15 +538,16 @@ window.addEventListener('pageshow', remeasureSbcut);
   /* stretch 로 두어야 이름이 칸 폭에 맞춰 «...» 로 줄어든다.
      flex-start 면 글자 길이만큼 늘어나 인원칸이 화면 밖으로 밀려난다 */
   .who{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;align-items:stretch}
-  /* 메모는 이름 아래 보조 정보 — 금색(경보처럼 보임)에서 낮춰 조용하게. 앞에 작은 점. */
+  /* 메모는 이름 아래 보조 정보 — 금색(경보처럼 보임)에서 낮춰 조용하게.
+     ★앞에 작은 점을 뒀었는데 뺐다(2026-09-18). 메모는 이미 이름과 세 단계 떨어져 있다 — 크기 17→13, 굵기 700→600,
+       색 --text→--dim. 점은 같은 일을 하는 네 번째 표시였고, 정작 «줄이 안 맞는» 원인이었다: 첫 줄만 점만큼 들여써지고
+       둘째 줄부터는 맨 왼쪽에서 시작해 왼쪽 모서리가 들쭉날쭉했다. 점을 빼니 이름과 한 기준선으로 맞는다.
+     ★줄바꿈은 어절 단위로. break-all 은 「알레르/기(땅콩)」처럼 낱말 가운데를 잘랐다.
+       긴 낱말 하나가 칸보다 넓을 때만 overflow-wrap 이 강제로 끊는다. */
   .memo{
     margin-top:2px;font-size:13px;font-weight:600;line-height:1.35;
     color:var(--dim);text-align:left;
-    word-break:break-all;
-  }
-  .memo::before{
-    content:"";display:inline-block;width:3px;height:3px;border-radius:50%;
-    background:var(--off);vertical-align:middle;margin:0 6px 2px 1px;
+    word-break:keep-all;overflow-wrap:anywhere;
   }
   .row.arrived .memo, .row.cancelled .memo{color:var(--off)}
   .erow.memorow{margin-top:6px}
@@ -1024,7 +1025,7 @@ window.addEventListener('pageshow', remeasureSbcut);
        한 줄 안에 내용 90px · 빈칸 270px 이 됐다 (오너 2026-09-15 「가운데가 엄청 비어 있다」).
        오른쪽에 남는 자리는 이제 «여백»이지 «구멍»이 아니다.
      ★메모는 여태 안 그렸다. 백업 스냅샷은 항목을 통째로 담으므로(memo 포함) 가진 정보를
-       안 보여준 것이었다 — 본 화면 .memo 와 같은 꼴(13 · --dim · 앞에 점)로 되살린다. */
+       안 보여준 것이었다 — 본 화면 .memo 와 같은 꼴(13 · --dim)로 되살린다. */
   .bkvrow{display:flex;align-items:flex-start;gap:9px;padding:7px 0;font-size:14px;line-height:1.35}
   .bkvrow .ck{width:14px;height:14px;flex:0 0 auto;display:grid;place-items:center;line-height:0;color:transparent;margin-top:2px}
   .bkvrow .ck svg{display:block}
@@ -1035,14 +1036,12 @@ window.addEventListener('pageshow', remeasureSbcut);
   .bkvrow .nm{flex:0 1 auto;min-width:0;color:var(--text);font-weight:700;
               white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bkvrow .px{flex:0 0 auto;color:var(--text);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
-  /* 메모 — 본 화면 .memo 와 같은 꼴(13 · --dim · 앞에 점). 백업 스냅샷은 항목을 통째로 담아
+  /* 메모 — 본 화면 .memo 와 같은 꼴(13 · --dim · 앞의 점은 2026-09-18 에 둘 다 뺐다). 백업 스냅샷은 항목을 통째로 담아
      메모까지 들어 있는데 여태 안 그렸다. 복사 양식에도 메모를 실으면서(reportText) 같이 되살렸다.
      ★화면과 붙여넣기가 이제 같은 것을 담는다 — 한쪽에만 있으면 「보이는데 못 가져가는」 게 된다. */
   .bkvbody{flex:1;min-width:0;display:flex;flex-direction:column}
   .bkvl1{display:flex;align-items:baseline;gap:8px;min-width:0}
-  .bkvmemo{margin-top:2px;font-size:13px;font-weight:600;line-height:1.35;color:var(--dim);word-break:break-all}
-  .bkvmemo::before{content:"";display:inline-block;width:3px;height:3px;border-radius:50%;
-    background:var(--off);vertical-align:middle;margin:0 6px 2px 1px}
+  .bkvmemo{margin-top:2px;font-size:13px;font-weight:600;line-height:1.35;color:var(--dim);word-break:keep-all;overflow-wrap:anywhere}
   .bkvrow.go .bkvmemo, .bkvrow.off .bkvmemo{color:var(--off)}   /* 본 화면 .row.arrived .memo 와 같게 */
   /* 처리된 행은 이름도 인원도 같이 가라앉는다 — 본 화면 .row.arrived/.cancelled 와 같은 규칙.
      ★취소 이름은 --off 에 취소선이었다. 본 화면은 2026-09-11 에 그 둘을 이미 버렸는데
@@ -1527,10 +1526,23 @@ window.addEventListener('pageshow', remeasureSbcut);
      ★0.5초 → 0.3초: 라이트는 맞은 칩이 «밝은 테라코타»(--rltHeat)에서 식는데, 빠지는 칸도 테라코타 → 흰색 사이에서 같은 색을
        지나, 첫 번쩍임이 걷힌 0.13초에 두 칸이 똑같은 연분홍이었다(시뮬레이터 영상). 0.3초면 그때 이미 거의 빠져 있다.
        빠지는 게 보이는 시간은 번쩍임 사이(0.07~0.15초)로 충분하다. */
-  .rltchip.lose{animation:boltLose .3s var(--ease);transition:none}
+  /* 처음 당첨칸의 불은 «번쩍임이 걷힌 뒤에» 빠진다 — 0.24초 기다렸다 0.34초에 걸쳐(both = 기다리는 동안 금색 유지).
+     ★지연이 없을 땐 0.1초 만에 꺼졌는데 그 0.1초는 번쩍임이 제일 셀 때라, 넘겨주는 장면이 통째로 안 보였다.
+       화면이 읽히는 0.3초엔 이미 다른 칸들과 구분이 안 됐고, 뒤바뀜은 «기억으로만» 알 수 있었다(2026-09-18).
+     ★곡선도 --ease(cubic-bezier(.2,.8,.2,1))에서 바꿨다 — 앞에 몰린 곡선이라 지연을 줘도 보이기 시작할 땐 이미
+       대부분 빠진 뒤였다. 타격 곡선(boltHit·resultHit 과 같은 값)이라 오르는 쪽과 빠지는 쪽이 한 박자로 움직인다.
+     ★크기는 «바로» 되돌린다(boltDeflate). --win 은 좌우 4pt씩 키우는 값이고 칸 간격은 8pt라, 이웃한 두 칸이 동시에
+       커지면 간격이 정확히 0 이 되어 «두 칸이 붙어» 보인다(오너 2026-09-18).
+       금색만 늦게 빠지고, 크기는 번쩍임 속에서 빠진다.
+     ★번쩍임이 «다 걷힌 뒤»(300ms)에 빠지기 시작해 번쩍임이 «끝나는 순간» 같이 끝난다 — 300 + 220 = 520.
+       그래야 빠져나가는 과정이 통째로 맨눈에 든다. 240+280(=520)도 재 봤지만 구분되는 시간이 0.18 → 0.20초로 이쪽이 길다.
+       예전엔 240+340 = 580ms 라 혼자 늦게 정리됐다.
+       곡선도 타격 곡선 하나로 통일했다(번개 순간에 도는 것 전부: 흔들림·달아오름·결과 글자·크기·금색). */
+  .rltchip.lose{animation:boltDeflate .22s cubic-bezier(.45,0,.55,1), boltLose .22s cubic-bezier(.45,0,.55,1) .30s both;transition:none}
+  @keyframes boltDeflate{ 0%{transform:scale(var(--win, 1.09))} 100%{transform:none} }
   @keyframes boltLose{
-    0%  {background:var(--wait); border-color:var(--wait); color:var(--onWait); transform:scale(var(--win, 1.09))}
-    100%{background:var(--field); border-color:var(--line); color:var(--text); transform:none}
+    0%  {background:var(--wait); border-color:var(--wait); color:var(--onWait)}
+    100%{background:var(--field); border-color:var(--line); color:var(--text)}
   }
   @keyframes boltHit{
     0%  {background:var(--rltHeat); border-color:var(--rltHeat)}
@@ -4908,13 +4920,15 @@ window.dispatchEvent(new Event('fb-ready'));
         var r = 1 + wob * Math.sin(a * 3 + ph) + rnd(-.07, .07);
         bite.push([cx - Math.cos(a) * bw / 2 * r, top - 1 + Math.sin(a) * bd * r]);
       }
-      // 금 — 파인 곳 양옆에서 «옆으로» 짧게(아래로 뻗으면 이름에 닿는다)
+      // 금 — 파인 곳 양옆에서 «비스듬히 아래»로 두 가닥. 길이는 이름 글자(칸 위에서 11pt 아래)에 안 닿게 짧게.
+      // ★수평으로 뻗었을 땐 검은 자국 양옆의 수염처럼 보였다 — 넓은 칸(2명)에서 콧수염 같은 실루엣이 됐다(오너 2026-09-18).
       var cracks = [];
-      for (i = 0; i < 3; i++){
+      for (i = 0; i < 2; i++){
         var left = i % 2 === 0, from = bite[left ? 2 + Math.floor(rnd(0, 3)) : 10 + Math.floor(rnd(0, 3))];
-        var ang = left ? rnd(2.6, 3.0) : rnd(.15, .55), seg = bw * rnd(.28, .45) / 3, line = [from];
+        var down = rnd(.45, .95);                                   // 수평에서 아래로 25~55°
+        var ang = left ? Math.PI - down : down, seg = bw * rnd(.26, .4) / 3, line = [from];
         for (j = 0; j < 3; j++){
-          ang += rnd(-.5, .5);
+          ang += rnd(-.3, .3);
           var last = line[line.length - 1];
           line.push([last[0] + Math.cos(ang) * seg, last[1] + Math.sin(ang) * seg]);
         }
@@ -4951,7 +4965,7 @@ window.dispatchEvent(new Event('fb-ready'));
         var soot = ctx.createRadialGradient(cx, top, 2, cx, top, Math.min(27, bw * .85));
         soot.addColorStop(0, 'rgba(30,16,4,.85)'); soot.addColorStop(.45, 'rgba(45,24,6,.45)'); soot.addColorStop(1, 'rgba(45,24,6,0)');
         ctx.fillStyle = soot; ctx.fillRect(cx - bw * 1.2, top - 4, bw * 2.4, bw * 1.3);
-        ctx.strokeStyle = 'rgba(28,14,3,.85)'; ctx.lineWidth = 1.1; ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(28,14,3,.85)'; ctx.lineWidth = .9; ctx.lineJoin = 'round';
         cracks.forEach(function(line){ path(line, false); ctx.stroke(); });
         ctx.restore();
         path(bite, true); ctx.fillStyle = hole; ctx.fill();
@@ -4971,7 +4985,9 @@ window.dispatchEvent(new Event('fb-ready'));
           for (i = 0; i < 14; i++){
             var e = heat * glow[i].v * (.55 + .45 * Math.sin(t * glow[i].w + glow[i].p));
             if (e < .05) continue;
-            ctx.strokeStyle = t < .05 ? 'rgba(255,246,224,' + glow[i] + ')'
+            // ★버그였다 — 흰빛 쪽 알파 자리에 객체(`glow[i]`)가 들어가 'rgba(255,246,224,[object Object])' 가 됐다.
+            //   캔버스는 잘못된 색을 «무시»하므로 직전 색(탄 자국 갈색)으로 그려졌다 — 불붙는 첫 0.05초가 검붉었다.
+            ctx.strokeStyle = t < .05 ? 'rgba(255,246,224,' + Math.min(1, e * 1.3) + ')'
                                       : 'rgba(255,' + Math.round(60 + 150 * e) + ',' + Math.round(20 + 40 * e) + ',' + Math.min(1, e * 1.3) + ')';
             ctx.beginPath(); ctx.moveTo(bite[i][0], bite[i][1]); ctx.lineTo(bite[i + 1][0], bite[i + 1][1]); ctx.stroke();
           }
