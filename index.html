@@ -1090,8 +1090,11 @@ window.addEventListener('pageshow', remeasureSbcut);
     background:var(--panel2);border-radius:12px;
   }
   .wnet + .wnet{margin-top:8px}   /* 카드 사이만 — 마지막 카드 밑엔 여백 안 쌓임 */
+  /* 둥근 복사 버튼이 붙는 줄 — 오른쪽 여백만 13 → 8px. 둥근 버튼은 제 여백을 가진 것처럼 보여
+     다른 줄과 같은 13px 을 주면 가장자리에서 멀어 보인다. 설치 안내에만 있던 값을 규칙으로 뽑았다. */
+  .wnet.cpy{padding-right:8px}
   /* 설치 안내의 주소 칸 — Wi-Fi 칸과 같은 모양. 값은 읽는 게 아니라 복사하는 것이라 조금 작게 */
-  .wnet.urlrow{margin-bottom:14px;padding-right:8px}
+  .wnet.urlrow{margin-bottom:14px}
   .wnet.urlrow .k{flex:0 0 auto}   /* 한 줄뿐이라 Wi-Fi 처럼 라벨 폭을 맞출 대상이 없다 */
   .wnet .v.url{font-size:13px;font-weight:600;letter-spacing:.01em}
   .urlcopy{
@@ -1509,7 +1512,7 @@ window.addEventListener('pageshow', remeasureSbcut);
      강조색을 흰색 쪽으로 반쯤 옮긴 «밝은 테라코타»에서 식게 한다. */
   .rlt{--rltHeat:#fff6e0}
   html[data-theme="light"] .rlt{--rltHeat:color-mix(in srgb, var(--wait) 45%, #fff)}
-  /* ── 날벼락 (20%) ── 번개 · 번쩍임 · 카드 흔들림 · 맞은 칩(달궈짐 + 탄 자국)이 한 순간(번쩍임 정점)에 친다.
+  /* ── 날벼락 (25%) ── 번개 · 번쩍임 · 카드 흔들림 · 맞은 칩(달궈짐 + 탄 자국)이 한 순간(번쩍임 정점)에 친다.
      시각은 JS strike() 에, 탄 자국은 scarChip() 에 모여 있다. 가라앉는 차례: 빛 0.42초 → 흔들림·식음 0.56초 → 불씨 0.7초 → 연기 1.3초.
      번개는 카드 위를 지난다 — 뒤로 보내면 칩에 안 닿아 「누가 맞았나」가 흐려진다. 0.5초라 글자를 읽는 데는 지장이 없다. */
   /* 번쩍임: screen · 금색 · «두 번»(정점 .75 → 번개가 다시 켜질 때 .55). screen 은 어두운 화면을 «빛이 비추듯»
@@ -1779,6 +1782,7 @@ window.addEventListener('pageshow', remeasureSbcut);
   <button type="button" class="dwitem" id="aboutBtn">익순이란?</button>
   <button type="button" class="dwitem" id="faqBtn">자주 묻는 질문</button>
   <button type="button" class="dwitem" id="installBtn">앱으로 설치하기</button>
+  <button type="button" class="dwitem" id="donateBtn">후원</button>
   <div class="dwsep"></div>
   <button type="button" class="dwitem danger" id="resetBtn">명단 초기화</button>
   <button type="button" class="dwitem" id="logoutBtn">로그아웃</button>
@@ -4785,7 +4789,7 @@ window.dispatchEvent(new Event('fb-ready'));
     //   P(x) = .8·(1/n) + .2·[ (n-1)/n · 1/(n-1) ] = .8/n + .2/n = 1/n
     // 새 당첨자가 켜지는 순간은 «빛 안»(번쩍임 정점)에 둔다 — 불이 옆 칸으로 옮겨가는 걸 보여주면 「덜 돌았나」가 되고,
     // 빛이 걷혔을 때 이미 켜져 있으면 「맞았다」가 된다. 처음 당첨자는 그 순간부터 제자리에서 보이게 꺼진다(.rltchip.lose).
-    var TWIST_P = 0.20;
+    var TWIST_P = 0.25;   // 날벼락이 칠 확률. 오너가 2026-09-20 0.20 → 0.25 로 올렸다.
     var BOLT_SEGS = 16, BOLT_JIT = 30, BOLT_BRANCHES = 3, BOLT_MS = 440;
     var sky = document.getElementById('rltSky');
     var flash = document.getElementById('rltFlash');
@@ -5400,7 +5404,7 @@ window.dispatchEvent(new Event('fb-ready'));
     + '<rect x="9" y="9" width="12" height="12" rx="3"/>'
     + '<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   function urlRowHtml(){
-    return '<div class="wnet urlrow"><span class="k">링크</span>'
+    return '<div class="wnet urlrow cpy"><span class="k">링크</span>'
       + '<span class="v url">' + esc(appUrl().replace(/^https?:\/\//, '')) + '</span>'
       + '<button type="button" class="urlcopy" aria-label="링크 복사">' + ICON_COPY + '</button></div>';
   }
@@ -5409,6 +5413,22 @@ window.dispatchEvent(new Event('fb-ready'));
     var cp = document.querySelector('#sheetBody .urlcopy');
     if (cp) cp.onclick = function(){ copyText(appUrl(), '링크 복사됨'); };
   }
+
+  // 후원 계좌 — 여기 한 군데서만 고친다.
+  // ★보이는 글자 = 복사되는 글자. 하이픈을 떼고 복사하면 「왜 다르지」가 되고, 대조할 수도 없다.
+  //   은행 앱은 하이픈이 있어도 알아서 떼고 받는다.
+  var DONATE = { name: '송주민', bank: '국민은행', acc: '410102-01-450720' };
+  document.getElementById('donateBtn').addEventListener('click', function(){
+    hideDrawer();
+    // 예금주를 «먼저» 둔다 — 송금 화면에서 마지막에 대조하는 게 이름이라, 못 보고 보내면 돌이킬 수 없다.
+    openSheet('후원',
+      '<p class="about">커피 한 잔 값이면 충분합니다.</p>'
+      + '<div class="wnet"><span class="k">예금주</span><span class="v">' + DONATE.name + '</span></div>'
+      + '<div class="wnet cpy"><span class="k">' + DONATE.bank + '</span><span class="v">' + DONATE.acc + '</span>'
+      +   '<button type="button" class="urlcopy" aria-label="계좌번호 복사">' + ICON_COPY + '</button></div>');
+    var cp = document.querySelector('#sheetBody .urlcopy');
+    if (cp) cp.onclick = function(){ copyText(DONATE.acc, '계좌번호 복사됨'); };
+  });
   document.getElementById('installBtn').addEventListener('click', function(){
     hideDrawer();
     openInstallSheet();
