@@ -501,11 +501,77 @@
     tru('문자열을 돌려준다', typeof a === 'string' && a.length > 0, a);
   })();
 
+  /* ==================== 기록 줄 합치기 ==================== */
+  group('dedupeLogRows — 같은 사람·같은 종류를 보여 줄 때 합침');
+  (function(){
+    var T0 = 1758400000000;   // 아무 시각
+    function r(at, k, s){ return { at: at, t: '10:00', k: k, s: s }; }
+    // 최신순으로 들어온다
+    var rows = [r(T0+90000,'방문','15:00 임동현'), r(T0+30000,'체크 해제','15:00 임동현'), r(T0,'방문','15:00 임동현')];
+    var d = T.dedupeLogRows(rows);
+    check('2분 안의 같은 줄은 최신만', d.length, 2);
+    check('남은 것은 최신 시각', d[0].at, T0+90000);
+    check('종류가 다르면 남는다', d[1].k, '체크 해제');
+
+    // 창 밖이면 둘 다 남는다 — 「18시에 왔다 21시에 다시 체크」 같은 이력을 잃지 않는다
+    var far = [r(T0+400000,'방문','15:00 임동현'), r(T0,'방문','15:00 임동현')];
+    check('2분 밖이면 각자 남는다', T.dedupeLogRows(far).length, 2);
+
+    // 사람이 다르면 안 합친다
+    var two = [r(T0+10000,'방문','15:00 임동현'), r(T0,'방문','15:00 최민식')];
+    check('대상이 다르면 안 합침', T.dedupeLogRows(two).length, 2);
+    tru('빈 입력', T.dedupeLogRows(null).length === 0);
+  })();
+
+  group('foldLogRows — 한 순간의 무더기를 한 줄로');
+  (function(){
+    function r(at, k, s){ return { at: at, t: '17:15', k: k, s: s }; }
+    var batch = [r(3,'자동 취소','17:00 정약용'), r(2,'자동 취소','17:00 강감찬'), r(1,'자동 취소','17:00 이순신')];
+    var f = T.foldLogRows(batch);
+    check('셋이 한 줄로', f.length, 1);
+    check('이름이 모두 담긴다', f[0].names.length, 3);
+    check('시간대도 같이', f[0].slot, '17:00');
+
+    // 셋 중 하나라도 다르면 안 접는다
+    check('시각이 다르면 따로', T.foldLogRows([{at:2,t:'17:15',k:'자동 취소',s:'17:00 가'},
+                                             {at:1,t:'17:16',k:'자동 취소',s:'17:00 나'}]).length, 2);
+    check('종류가 다르면 따로', T.foldLogRows([{at:2,t:'17:15',k:'자동 취소',s:'17:00 가'},
+                                             {at:1,t:'17:15',k:'취소',s:'17:00 나'}]).length, 2);
+    check('대상 시간대가 다르면 따로', T.foldLogRows([{at:2,t:'17:15',k:'자동 취소',s:'17:00 가'},
+                                                 {at:1,t:'17:15',k:'자동 취소',s:'18:00 나'}]).length, 2);
+    // 같은 이름이 같은 분에 두 번 찍혀도 「가 · 가」가 되지 않는다
+    var dup = T.foldLogRows([{at:2,t:'17:15',k:'자동 취소',s:'17:00 가'},
+                             {at:1,t:'17:15',k:'자동 취소',s:'17:00 가'}]);
+    check('같은 이름은 한 번만', dup[0].names.length, 1);
+  })();
+
   /* ==================== 스타일시트 온전성 ==================== */
   /* ★이 묶음은 «순수 함수»가 아니라 브라우저가 실제로 파싱한 CSS 를 본다.
      2026-09-19 주석을 닫는 기호를 잘못 넣어 설명글이 규칙 자리로 샌 적이 있는데,
      그때 이 셀프테스트는 144/144 로 통과했다 — 화면은 망가졌는데도. 그래서 넣는다.
      (설명글에 «주석 닫는 기호» 자체를 적지 말 것. 이 주석도 그것 때문에 한 번 깨졌다.) */
+  // CSS 의 시간 토큰과 JS 가 기다리는 시간이 «한 군데»에서 나오는지.
+  // 예전엔 JS 에 210·130·620 을 베껴 적어 뒀다 — 토큰을 고치면 말없이 어긋났다(2026-09-21).
+  group('움직임 — CSS 시간과 JS 시간이 한 군데인가');
+  (function(){
+    var T = window.__ixTest || {};
+    var cs = getComputedStyle(document.documentElement);
+    function tok(n){
+      var t = (cs.getPropertyValue(n) || '').trim();
+      var v = parseFloat(t);
+      return t.slice(-2) === 'ms' ? v : v * 1000;
+    }
+    tru('MS 를 내보낸다', !!T.MS, T.MS);
+    if (!T.MS) return;
+    eq('MS.move  = --tMove', T.MS.move, tok('--tMove'));
+    eq('MS.press = --tPress', T.MS.press, tok('--tPress'));
+    eq('MS.state = --tState', T.MS.state, tok('--tState'));
+    // 초 단위(.2s)를 ms 로 옳게 읽었나 — 0.2 로 읽으면 행이 즉시 지워진다
+    tru('초 단위를 ms 로 읽는다', T.MS.move > 50 && T.MS.move < 2000, T.MS.move);
+    tru('--tPress < --tState < --tMove', T.MS.press < T.MS.state && T.MS.state < T.MS.move,
+        T.MS.press + '/' + T.MS.state + '/' + T.MS.move);
+  })();
+
   group('스타일시트 — 주석·규칙 온전성');
   (function(){
     var sheets = [].slice.call(document.styleSheets), rules = [], kf = {};
