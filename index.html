@@ -458,6 +458,11 @@ window.addEventListener('pageshow', remeasureSbcut);
     display:grid;place-items:center;line-height:0;padding:0;
   }
   .searchbar button svg{display:block}
+  /* 닿는 범위만 44 로 — 보이는 크기(36)는 그대로. 메뉴 버튼(.nav button::after)과 같은 수법.
+     36×36 은 가로세로가 «둘 다» 44 에 모자랐다(2026-09-21 — 검색이 닫혀 있어 앞선 점검에 안 잡혔다).
+     넓혀도 글자를 안 덮는다: 뒤로 버튼 오른쪽 끝과 글자 시작 사이 16 → 12 가 남는다.
+     지우기 쪽은 개수(「3건」)와 4 겹치지만 개수는 pointer-events:none 인 글자뿐이라 누를 거리가 아니다. */
+  .searchbar button::after{content:"";position:absolute;inset:-4px}
   .searchbar button:active, .searchbar button.dn{opacity:.4}   /* 면 없는 아이콘 = 흐려짐 (누름 규칙 ②) */
   mark{background:var(--mark);color:var(--text);-webkit-text-fill-color:var(--text);border-radius:3px;padding:0 1px}
 
@@ -1027,9 +1032,9 @@ window.addEventListener('pageshow', remeasureSbcut);
   /* 시트 안의 «없습니다 / 못 불러왔습니다» 줄 — 13/400 으로 .sheetNote 와 같은 활자를 쓴다.
      14 였는데, 같은 시트 안에서 안내는 13(.sheetNote) 인데 빈 상태만 14 라 한 시트에 설명 활자가 둘이었다.
      (본문 .about 14 는 그대로 — 그건 «안내»가 아니라 「익순이란?」의 내용 자체다. 2026-09-21) */
-  /* margin:0 은 «있어야 한다» — 제 여백은 padding 으로 다 갖고 있고, 브라우저 기본 margin(13×2=26px)은
-     평소엔 부모 밖으로 접혀 안 보이다가 부모에 overflow 가 붙는 순간 높이에 더해진다.
-     기록에서 높이를 0.2s 로 움직일 때 그 26px 이 끝에서 «되튐»으로 보였다(2026-09-21). */
+  /* margin:0 — 제 여백은 padding 으로 다 갖고 있다. 브라우저 기본 margin(13×2=26px)은 의도한 값이 아니었고,
+     부모에 overflow 가 붙는 순간 높이에 더해지는 함정이 있다(기록 높이를 움직이던 때 끝에서 «되튐»으로
+     드러났다, 2026-09-21). 그 움직임은 뺐지만 이 값은 그대로 맞다 — 시뮬레이터로 여백 확인함. */
   .sheetMsg{margin:0;font-size:13px;line-height:1.6;color:var(--dim);padding:6px 0 14px}
 
   /* 「지난 명단」 시트 — 목록은 「최근 변경 내역」(.lgrow) 처럼 한 줄(시각·요약·›), 행을 누르면 상세. */
@@ -2960,6 +2965,19 @@ window.dispatchEvent(new Event('fb-ready'));
   }
   setTimeout(hideSplash, 12000);
 
+  // 하단 「전체 접기/펼치기」 — 라벨·모양·켜짐을 한 곳에서. render 의 두 갈래(목록 있음/비었음)가 모두 부른다.
+  // 시간대가 하나도 안 그려졌으면(대기 모드에서 다 처리됨·검색 0건) 접을 것도 펼칠 것도 없다 — 기본 라벨로 두고 꺼 둔다.
+  // 숨기면 알약이 2칸이 되어 모양이 바뀌므로 자리는 지킨다(iOS 툴바의 비활성 항목과 같은 처리).
+  function paintFoldBtn(noGroups, openCount, q){
+    var foldBtnEl = document.getElementById('foldBtn');
+    if (!foldBtnEl) return;
+    var showFold = noGroups || openCount;
+    var fl = foldBtnEl.querySelector('.foldlbl'), fp = foldBtnEl.querySelector('.foldp');
+    if (fl) fl.textContent = showFold ? '전체 접기' : '전체 펼치기';
+    if (fp) fp.setAttribute('d', showFold ? 'M6 10l6-6 6 6M6 20l6-6 6 6'    // 겹화살 위 = 접기 (시간바 .chev 와 같은 어휘)
+                                          : 'M6 4l6 6 6-6M6 14l6 6 6-6');   // 겹화살 아래 = 펼치기
+    foldBtnEl.disabled = noGroups || !!q;   // 검색 중엔 결과가 늘 다 펼쳐져 있어 접을 게 없다
+  }
   function render(){
     hideSplash();
     if (!interactionActive() && deferredState){
@@ -3001,6 +3019,9 @@ window.dispatchEvent(new Event('fb-ready'));
     var em = document.getElementById('emptyMsg');
     em.classList.remove('bear');   // 곰 화면을 지나온 뒤의 「검색 결과 없음」이 곰 여백(0)을 물려받지 않게
     if (!items.length){
+      // ★여기서 일찍 끝나도 접기 버튼은 맞춰 둔다 — 안 그러면 직전 상태가 남는다.
+      //   검색을 열자마자 0건이면 화면은 비었는데 「전체 접기」가 켜진 채였다(2026-09-21 실측).
+      paintFoldBtn(true, 0, q);
       if (q){
         em.classList.remove('hide');
         em.textContent = '「' + query.trim() + '」 검색 결과가 없습니다';
@@ -3057,7 +3078,9 @@ window.dispatchEvent(new Event('fb-ready'));
       // ★나가는 중인 행은 남긴다. 상태만 보고 거르면, 먼저 체크한 행의 타이머가 목록을 다시 그리는 순간
       //   아직 제 시간이 안 된 «다른» 행들까지 같이 쓸려 나간다 — 연달아 체크하면 바로 사라졌다(오너 2026-09-20).
       //   서버에서 온 갱신·시간대 접힘 등 다른 이유로 다시 그릴 때도 마찬가지였다.
-      var rows = (viewMode === 'pending')
+      // ★검색 중엔 상태로 거르지 않는다(2026-09-21). 걸렀더니 기본 화면(대기)에서 이미 방문·취소한 손님을 찾으면
+      //   개수는 「1건」인데 줄은 0 이었다 — 「동현」은 3건이라 하고 2줄만 보였다. 앱은 늘 「대기」로 열린다.
+      var rows = (viewMode === 'pending' && !q)
         ? g.items.filter(function(it){ return it.status === 'pending' || leaveTimers[it.id]; })
         : g.items;
       if (viewMode === 'pending' && !rows.length) return;
@@ -3110,18 +3133,7 @@ window.dispatchEvent(new Event('fb-ready'));
       if (closeLeftSec()) cdStart(); else cdStop();
     }
 
-    var foldBtnEl = document.getElementById('foldBtn');
-    if (foldBtnEl){
-      // 시간대가 하나도 안 그려졌으면(대기 모드에서 다 처리됨) 접을 것도 펼칠 것도 없다 — 기본 라벨로 두고 꺼 둔다.
-      // 숨기면 알약이 2칸이 되어 모양이 바뀌므로 자리는 지킨다(iOS 툴바의 비활성 항목과 같은 처리).
-      var noGroups = !list.querySelector('.group');
-      var showFold = noGroups || openCount;
-      var fl = foldBtnEl.querySelector('.foldlbl'), fp = foldBtnEl.querySelector('.foldp');
-      if (fl) fl.textContent = showFold ? '전체 접기' : '전체 펼치기';
-      if (fp) fp.setAttribute('d', showFold ? 'M6 10l6-6 6 6M6 20l6-6 6 6'    // 겹화살 위 = 접기 (시간바 .chev 와 같은 어휘)
-                                            : 'M6 4l6 6 6-6M6 14l6 6 6-6');   // 겹화살 아래 = 펼치기
-      foldBtnEl.disabled = noGroups;
-    }
+    paintFoldBtn(!list.querySelector('.group'), openCount, q);
 
     // paste-open 은 붙여넣기 화면 여부. 창 상태와 어긋나 헤더가 계속 숨는 걸 막는다.
     document.body.classList.toggle('paste-open', !panel.classList.contains('hide'));
@@ -3789,10 +3801,12 @@ window.dispatchEvent(new Event('fb-ready'));
     if (row && row.style.height) row.style.height = '';   // 접다 말고 되살아난 행 (체크 해제)
   }
   function cancelAllLeaves(){ Object.keys(leaveTimers).forEach(cancelLeave); }
+  // 검색 중이면 「대기」 보기의 규칙(처리된 줄 숨김·체크하면 빠짐)을 멈춘다 — 찾는 사람은 상태와 상관없이 다 보여야 한다.
+  function searching(){ return !!(query && query.trim()); }
   function scheduleLeave(id){
     cancelLeave(id);
     leaveTimers[id] = setTimeout(function(){
-      if (viewMode !== 'pending'){ cancelLeave(id); return; }   // 그새 「전체」로 갔으면 남는다
+      if (viewMode !== 'pending' || searching()){ cancelLeave(id); return; }   // 그새 「전체」로 갔거나 검색을 시작했으면 남는다
       leavingNow[id] = true;
       var row = rowForId(id);
       if (row){
@@ -3818,7 +3832,8 @@ window.dispatchEvent(new Event('fb-ready'));
 
     cancelLeave(it.id);
     row.className = 'row ' + it.status;
-    if (viewMode === 'pending' && it.status !== 'pending') scheduleLeave(it.id);
+    // 검색 중엔 안 뺀다 — 뺐다가는 검색이 다시 그리는 순간 도로 튀어나온다. 방금 체크한 결과(✓)가 그 자리에 보여야 한다.
+    if (viewMode === 'pending' && !searching() && it.status !== 'pending') scheduleLeave(it.id);
     var chk = row.querySelector('.check');
     if (chk){
       chk.innerHTML = it.status === 'arrived' ? ICON_GO
@@ -3853,6 +3868,9 @@ window.dispatchEvent(new Event('fb-ready'));
   // 시간대 접기 / 펼치기
   function toggleSlot(time){
     if (!state) return;
+    // 검색 중엔 아무것도 바꾸지 않는다. 검색 결과는 늘 다 펼쳐 보이므로(render 의 shut = q ? false …)
+    // 눌러도 눈엔 변화가 없는데 뒤에서 접힘 상태만 바뀌어, 검색을 닫으면 그 시간대가 말없이 접혀 있었다(2026-09-21 실측).
+    if (searching()) return;
     var mine = itemsAt(time);
     if (!mine.length) return;
     var grp = slotEl(time);
@@ -4575,6 +4593,7 @@ window.dispatchEvent(new Event('fb-ready'));
     }
   }
   function openSearch(){
+    cancelAllLeaves();   // 체크하고 곧바로 검색을 열어도, 빠지던 줄이 검색 결과에서 사라지지 않게
     scrollBeforeSearch = wrapEl ? wrapEl.scrollTop : 0;
     searchbar.classList.remove('hide');
     if (wrapEl) wrapEl.scrollTop = 0;
@@ -4631,13 +4650,15 @@ window.dispatchEvent(new Event('fb-ready'));
   var foldBtn = document.getElementById('foldBtn');
   foldBtn.addEventListener('click', function(){
     if (!state || !state.items.length) return;
+    if (searching()) return;   // 검색 중엔 꺼져 있다(render). 눌려도 숨은 상태만 바뀌어 검색을 닫으면 전부 접혀 있었다.
     if (!panel.classList.contains('hide')) closePaste();
-    var slots = groupByTime(state.items.slice().sort(sortItems)), anyOpen = false;
-    var done = slots.map(function(g){
-      var d = tallyStatus(g.items).pend === 0;   // 대기가 비어 있는 시간대인지
-      if (!isCollapsed(g.time, d ? 0 : 1)) anyOpen = true;
-      return d;
-    });
+    var slots = groupByTime(state.items.slice().sort(sortItems));
+    var done = slots.map(function(g){ return tallyStatus(g.items).pend === 0; });   // 대기가 비어 있는 시간대인지
+    // ★접을지 펼칠지는 «눈에 보이는» 시간대로 정한다 — 라벨(render 의 openCount)과 같은 기준.
+    //   예전엔 숨은 시간대(대기 보기에서 처리가 끝나 안 보이는 것)까지 세서, 보이는 건 다 접혀 라벨이
+    //   「전체 펼치기」인데 숨은 하나가 펼쳐져 있으면 «접기»로 판단해 아무 일도 안 일어났다 —
+    //   두 번 눌러야 펼쳐졌다(2026-09-21 실측). 적용은 여전히 «전부»에 한다(「전체」 보기로 가도 맞게).
+    var anyOpen = !!document.querySelector('#list .group:not(.shut)');
     slots.forEach(function(g, i){ setCollapsed(g.time, anyOpen, done[i]); });
     if (anyOpen) openMenu = null;   // 전부 접을 땐 열린 메뉴도 닫는다
     render();
@@ -4971,7 +4992,7 @@ window.dispatchEvent(new Event('fb-ready'));
     //   P(x) = .8·(1/n) + .2·[ (n-1)/n · 1/(n-1) ] = .8/n + .2/n = 1/n
     // 새 당첨자가 켜지는 순간은 «빛 안»(번쩍임 정점)에 둔다 — 불이 옆 칸으로 옮겨가는 걸 보여주면 「덜 돌았나」가 되고,
     // 빛이 걷혔을 때 이미 켜져 있으면 「맞았다」가 된다. 처음 당첨자는 그 순간부터 제자리에서 보이게 꺼진다(.rltchip.lose).
-    var TWIST_P = 0.25;   // 실사용 값 (오너 2026-09-20, 0.20 → 0.25). 테스트앱엔 1.00 으로 올린다
+    var TWIST_P = 1.00;   // ★★★ 테스트앱 한시 100% — 번개 점검용. 실사용 값은 0.25. 실사용에 올리기 전 반드시 되돌릴 것 ★★★
     var BOLT_SEGS = 16, BOLT_JIT = 30, BOLT_BRANCHES = 3, BOLT_MS = 440;
     var sky = document.getElementById('rltSky');
     var flash = document.getElementById('rltFlash');
@@ -5618,8 +5639,10 @@ window.dispatchEvent(new Event('fb-ready'));
   // 그 줄만 «두 개를 묶어 놨다»고 티가 났다. 안에 들어가면 후원 줄이 바로 보이니 문 이름이 둘 다 적을 이유가 없다.
   var SITE = 'https://juminlabs.pikaju.workers.dev';
   // 계좌는 다음 규칙을 지킨다:
-  // ★보이는 글자 = 복사되는 글자. 하이픈을 떼고 복사하면 「왜 다르지」가 되고, 대조할 수도 없다.
-  //   은행 앱은 하이픈이 있어도 알아서 떼고 받는다.
+  // ★보여줄 땐 하이픈(읽기 좋게), 복사할 땐 «숫자만»(붙여넣기 좋게) — 오너 2026-09-21.
+  //   예전엔 「보이는 글자 = 복사되는 글자, 은행 앱은 하이픈을 알아서 뗀다」였는데 그 근거는 재 본 적 없는
+  //   짐작이었다. 숫자 키패드만 받는 계좌 입력칸은 하이픈이 섞이면 붙여넣기를 거부하거나 일부만 넣는다.
+  //   숫자만이면 어느 앱에서도 안 막힌다. 대조도 된다 — 숫자 순서는 같고 구분 기호만 빠진다.
   var DONATE = { name: '송주민', bank: '국민은행', acc: '410102-01-450720' };
   // 누르면 바로 연다 — 시트 한 겹을 더 두고 「열기」를 또 누르게 할 이유가 없다.
   // ★_blank 가 필수. 홈 화면 앱에서 같은 창에 열면 «앱 창 자체»가 홈페이지로 바뀐다.
@@ -5636,26 +5659,28 @@ window.dispatchEvent(new Event('fb-ready'));
       + '<div class="wnet cpy"><span class="k">' + DONATE.bank + '</span><span class="v">' + DONATE.acc + '</span>'
       +   '<button type="button" class="urlcopy" aria-label="계좌번호 복사">' + ICON_COPY + '</button></div>');
     var cp = document.querySelector('#sheetBody .urlcopy');
-    if (cp) cp.onclick = function(){ copyText(DONATE.acc, '계좌번호 복사됨'); };
-    /* 홈 화면 앱에서는 «진짜 사파리»로 넘긴다.
-       그냥 두면 iOS 가 앱 위에 덮이는 인앱 브라우저로 연다 — 앱은 뒤에 남지만 사파리가 아니다.
-       x-safari-https:// 는 애플이 문서로 밝힌 주소가 아니라서 언젠가 안 먹을 수 있다. 그래서
-       «떠났는지»를 보고(visibilitychange/pagehide) 아무 일도 없었으면 원래 방식으로 되돌린다 —
-       안 먹는 날에도 링크가 죽지는 않는다. 사파리에서 연 경우엔 손대지 않는다(새 탭이 정상 동작). */
+    // 복사는 «숫자만». 은행 앱 계좌 입력칸은 숫자 키패드라 하이픈이 섞이면 붙여넣기가 막히거나
+    // 일부만 들어간다. 화면에는 읽기 좋게 하이픈을 두고, 넘기는 값만 숫자로 (오너 2026-09-21).
+    if (cp) cp.onclick = function(){ copyText(DONATE.acc.replace(/\D/g, ''), '계좌번호 복사됨'); };
     var lk = document.querySelector('#sheetBody .site');
+    /* 아이폰 홈 화면 앱에서만 진짜 사파리로 넘긴다. 그 밖(사파리 탭·안드로이드)은 링크 원래 동작 그대로.
+       그냥 두면 iOS 가 앱 위에 덮이는 인앱 브라우저로 연다 — 앱은 뒤에 남지만 사파리가 아니다.
+       ★x-safari-https:// 는 애플이 문서로 밝힌 주소가 아니라 언젠가 안 먹을 수 있다. 그날엔 iOS 가
+         「주소가 유효하지 않다」를 띄운다 — 그러면 이 분기를 빼고 링크 원래 동작(인앱 브라우저)으로 돌릴 것.
+       navigator.standalone 은 iOS 사파리에만 있는 값이라 «아이폰 홈 화면 앱»만 정확히 고른다
+       (display-mode:standalone 은 안드로이드도 참이라 쓰면 안 된다 — 거기선 x-safari 가 없는 주소다).
+       ★예비 장치(«안 넘어가면 앱 안에서라도 연다»)는 «없는 게 맞다». 2026-09-21 시뮬레이터 홈 화면 앱 실측:
+         · 사파리로 넘어가는 데 0.9~1.0초 걸린다(blur·hidden 이 그때 온다).
+         · 0.7초 예비 → 넘어가기 «전에» 울려 앱 안에서도 열었다 = 오너가 본 「복귀해도 앱에도 열려 있다」.
+         · 2.5초 예비 → 겹치진 않지만 iOS 가 window.open 을 팝업으로 막는다(null) — 누른 지 오래돼서.
+           (0.7초 뒤 window.open 은 열린다. 누른 순간에서 멀어지면 막힌다.)
+         → «넘어간 뒤»와 «아직 열 수 있는 때»가 겹치지 않는다. 어떤 시간으로도 맞게 못 만든다.
+         x-safari 가 안 먹는 폰이면 iOS 가 스스로 「주소가 유효하지 않다」를 띄운다 — 예비가 있어도 거기선 막혔다.
+       다시 넣지 말 것. 셀프테스트가 이 자리에 window.open 이 돌아오면 잡는다. */
     if (lk) lk.addEventListener('click', function(e){
-      if (!isStandalone()) return;
+      if (window.navigator.standalone !== true) return;
       e.preventDefault();
-      var gone = false;
-      var mark = function(){ gone = true; };
-      document.addEventListener('visibilitychange', mark);
-      window.addEventListener('pagehide', mark);
-      try { location.href = 'x-safari-' + SITE; } catch(err){ gone = false; }
-      setTimeout(function(){
-        document.removeEventListener('visibilitychange', mark);
-        window.removeEventListener('pagehide', mark);
-        if (!gone && !document.hidden) window.open(SITE, '_blank', 'noopener');
-      }, 700);
+      location.href = 'x-safari-' + SITE;
     });
   });
   document.getElementById('installBtn').addEventListener('click', function(){
@@ -5804,7 +5829,6 @@ window.dispatchEvent(new Event('fb-ready'));
     });
   }
   function recRenderList(){
-    if (recAnim) recAnim.cancel();   // 전환 중에 통째로 다시 그리면 그 움직임은 버린다
     document.getElementById('sheetTitle').textContent = '기록';
     var body = document.getElementById('sheetBody');
     recLastHtml = recBodyHtml();
@@ -5814,47 +5838,19 @@ window.dispatchEvent(new Event('fb-ready'));
       b.onclick = function(){ recSwap(b.getAttribute('data-rec')); };
     });
   }
-  // 칸 바꾸기 — 세그먼트는 그대로 두고 aria-pressed 만 옮긴다(썸이 미끄러진다) + 아래 목록만 다시 그린다.
-  // ★높이도 같이 움직인다. 두 칸은 줄 수가 달라 시트 높이가 «툭» 달라진다 — 바닥에서 오는 시트라
-  //   그 변화가 제목줄을 위아래로 튕긴다. 썸과 «같은 시간·같은 곡선»(--tMove/--ease)으로 묶어야
-  //   「썸이 미끄러지고 판이 따라 자란다」는 한 동작으로 읽힌다. 명단 행이 빠질 때와 같은 수법
-  //   (auto 는 전환이 안 되니 픽셀로 박았다 풀어 준다. .row.leaving 참고).
-  var recAnim = null;
-  // 목록만 갈아 끼운다 — 세그먼트는 건드리지 않고, 판 높이는 0.2s 로 따라간다.
+  // 목록만 갈아 끼운다 — 세그먼트는 건드리지 않는다(그래야 썸이 미끄러진다).
   // 칸 바꾸기·서버 응답·기록 감시가 전부 이 하나를 쓴다(예전엔 셋 다 recRenderList 로 시트를 통째 다시 그렸다).
   //
-  // ★움직이는 건 «시트»지 안쪽 목록이 아니다. 목록 높이를 움직여 봤더니(2026-09-21), 두 칸이 다 길어
-  //   시트가 82vh 에 닿아 있을 땐 목록이 한참 줄어드는 동안 시트는 가만히 있다가 «중간부터» 따라와
-  //   남은 시간에 몰아서 움직였다 — 곡선이 뭉개지고 더 빨라 보인다. 시트를 직접 움직이면
-  //   ① 보이는 이동 그대로가 곡선을 탄다 ② 두 칸 높이가 같으면(둘 다 82vh) 아예 안 움직인다 — 그땐 그냥 바뀌는 게 맞다
-  //   ③ .sheet 는 이미 overflow:hidden 이라 잘라내려고 overflow 를 건드릴 일이 없다(마진 접힘 함정도 안 만난다).
-  //
-  // ★CSS transition 이 아니라 animate() 로 움직인다. .sheet 에는 «열고 닫는» transition 이 이미 걸려 있어
-  //   (transform/opacity) 인라인 transition 으로 덮으면 그게 죽는다 — 기록은 열고 300ms 뒤에 안내 한 줄이
-  //   붙어서 실제로 겹친다. animate() 는 인라인 스타일을 안 건드리고 끝나면 스스로 사라져,
-  //   중간에 닫아도 남는 게 없다. 시간·곡선은 CSS 토큰에서 읽어 온다 — 값을 두 군데 적지 않는다.
+  // ★판 높이는 «딱» 바뀐다 — 움직이는 건 썸 하나뿐 (오너 2026-09-21 「높이는 딱 변하고 버튼만 흘러가게」).
+  //   한때 시트 높이를 0.2s 로 따라 늘고 줄게 했었다(animate · --easeEven, 60fps 실측으로 고른 종 모양까지 맞췄다).
+  //   써 보니 오너는 판이 자라는 동안 기다리는 것보다 즉시 바뀌는 쪽을 골랐다. 되살리지 말 것.
   function recSetBody(){
     var list = document.getElementById('recBody');
     if (!list) return false;
     var html = recBodyHtml();
     if (html === recLastHtml) return true;    // 바뀐 게 없으면 손대지 않는다 — 기록 감시는 몇 초마다 들어온다
-    var sheet = document.querySelector('.sheet');
-    var motion = !!(sheet && sheet.animate) && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var h0 = motion ? sheet.offsetHeight : 0;
     list.innerHTML = html; recLastHtml = html;
     recBindRows(list);
-    if (!motion) return true;                 // 움직임 줄이기·옛 브라우저 — 그냥 바뀐다
-    var h1 = sheet.offsetHeight;
-    if (h0 === h1) return true;               // 시트가 안 움직이면 건드리지 않는다
-    if (recAnim) recAnim.cancel();
-    // 곡선은 --easeEven — 명단 행이 빠질 때(.row.leaving)와 같다. 높이 바뀜은 «들어오는 것»이 아니라
-    // «상태가 변하는 것»이라 앞뒤가 고른 곡선이 맞다. --ease(.2,.8,.2,1) 로 재 봤더니 223px 중 77%가
-    // 앞 3프레임에 몰리고(첫 프레임만 76px) 뒤 5프레임은 1~9px 씩 기었다(2026-09-21 실측).
-    var cs = getComputedStyle(document.documentElement);
-    recAnim = sheet.animate(
-      [{ height: h0 + 'px' }, { height: h1 + 'px' }],
-      { duration: (parseFloat(cs.getPropertyValue('--tMove')) || 0.2) * 1000,
-        easing: cs.getPropertyValue('--easeEven').trim() || 'ease-in-out' });
     return true;
   }
   // 칸 바꾸기 — 세그먼트는 그대로 두고 aria-pressed 만 옮긴다(썸이 미끄러진다) + 아래 목록만 다시 그린다
