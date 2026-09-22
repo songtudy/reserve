@@ -13,7 +13,16 @@
   function J(v){ try { return JSON.stringify(v); } catch(e){ return String(v); } }
 
   // 깊은 동등 비교 (undefined 필드도 구분)
+  // ★이건 «비교»만 한다 — 테스트를 남기는 건 check(name, got, want) 다.
+  //   eq('이름', 값, 기대) 로 쓰면 문자열과 값을 비교해 false 를 돌려주고 끝나 «아무것도 검사 안 한 채»
+  //   조용히 지나간다. 2026-09-21 에 9곳이 그렇게 몇 시간 동안 빈 테스트였다(추가한 7개 중 1개만 셈에 잡혀 드러남).
+  //   그래서 그렇게 불리면 실패로 크게 남긴다.
   function eq(a, b){
+    if (arguments.length === 3 && typeof a === 'string'){
+      (curGroup ? curGroup.rows : results).push({ name: '★eq 를 테스트처럼 씀 — check 로 바꿀 것: ' + a,
+        ok: false, got: 'eq(이름, 값, 기대)', want: 'check(이름, 값, 기대)' });
+      return false;
+    }
     if (a === b) return true;
     if (a && b && typeof a === 'object' && typeof b === 'object'){
       var ka = Object.keys(a), kb = Object.keys(b);
@@ -563,13 +572,69 @@
     }
     tru('MS 를 내보낸다', !!T.MS, T.MS);
     if (!T.MS) return;
-    eq('MS.move  = --tMove', T.MS.move, tok('--tMove'));
-    eq('MS.press = --tPress', T.MS.press, tok('--tPress'));
-    eq('MS.state = --tState', T.MS.state, tok('--tState'));
+    check('MS.move  = --tMove', T.MS.move, tok('--tMove'));
+    check('MS.press = --tPress', T.MS.press, tok('--tPress'));
+    check('MS.state = --tState', T.MS.state, tok('--tState'));
     // 초 단위(.2s)를 ms 로 옳게 읽었나 — 0.2 로 읽으면 행이 즉시 지워진다
     tru('초 단위를 ms 로 읽는다', T.MS.move > 50 && T.MS.move < 2000, T.MS.move);
     tru('--tPress < --tState < --tMove', T.MS.press < T.MS.state && T.MS.state < T.MS.move,
         T.MS.press + '/' + T.MS.state + '/' + T.MS.move);
+    // 기록 칸 바꾸기: 판 높이는 «딱», 움직이는 건 썸뿐 (오너 2026-09-21). 높이 애니메이션을 되살리면 잡는다.
+    var src = [].map.call(document.querySelectorAll('script:not([src])'), function(x){ return x.textContent; }).join('\n');
+    var at = src.indexOf('function recSetBody');
+    var body = at < 0 ? '' : src.slice(at, src.indexOf('\n  }\n', at) + 4);
+    tru('기록 목록 갈기(recSetBody)를 찾았다', at >= 0, at);
+    tru('★기록 판 높이는 즉시 바뀐다 — animate·transition 없음', body && !/\.animate\s*\(|transition/.test(body));
+  })();
+
+  // 「만든 곳」 홈페이지 → 아이폰 홈 화면 앱에서 진짜 사파리로.
+  // ★예비 장치(«안 넘어가면 앱 안에서 window.open»)는 없어야 한다. 시뮬레이터 실측으로 어떤 시간으로도
+  //   맞게 못 만든다는 게 드러났다 — 0.7초면 넘어가기 전에 울려 앱 안에서도 열리고(오너 제보 버그),
+  //   2.5초면 iOS 가 팝업으로 막는다. 누가 다시 넣으면 여기서 잡는다. (2026-09-21)
+  group('만든 곳 — 홈페이지는 사파리로만');
+  (function(){
+    var src = [].map.call(document.querySelectorAll('script:not([src])'), function(x){ return x.textContent; }).join('\n');
+    var at = src.indexOf("querySelector('#sheetBody .site')");
+    tru('홈페이지 클릭 처리를 찾았다', at >= 0, at);
+    if (at < 0) return;
+    var body = src.slice(at, at + 2600);
+    var end = body.indexOf("getElementById('installBtn')");
+    if (end > 0) body = body.slice(0, end);
+    tru('사파리로 넘긴다 (x-safari-)', body.indexOf("'x-safari-'") >= 0);
+    tru('아이폰 홈 화면 앱에서만 (navigator.standalone)', /navigator\.standalone\s*!==\s*true/.test(body));
+    tru('★앱 안에서 여는 예비 window.open 이 없다', !/window\.open\s*\(/.test(body));
+    tru('★예비 타이머가 없다', !/setTimeout\s*\(/.test(body));
+    // 계좌번호: 보여줄 땐 하이픈, 복사할 땐 숫자만 (오너 2026-09-21). 은행 앱 숫자 입력칸에 그대로 붙게.
+    tru('계좌번호는 숫자만 복사한다', /copyText\(\s*DONATE\.acc\.replace\(\s*\/\\D\/g/.test(src));
+  })();
+
+  // 이름 검색 — 앱은 늘 「대기」로 열린다. 거기서 이미 방문·취소한 손님을 찾으면 개수는 「1건」인데 줄이 0 이었다(2026-09-21).
+  // 검색 중엔 「대기」 보기의 두 규칙(처리된 줄 숨김·체크하면 빠짐)을 멈춘다. 실측: 대기·전체가 같은 결과를 낸다.
+  group('이름 검색 — 「대기」에서도 다 보인다');
+  (function(){
+    var src = [].map.call(document.querySelectorAll('script:not([src])'), function(x){ return x.textContent; }).join('\n');
+    tru('검색 중엔 상태로 거르지 않는다', /viewMode === 'pending' && !q\)\s*\?\s*g\.items\.filter/.test(src));
+    tru('검색 중엔 체크해도 빠지기를 안 건다', /!searching\(\) && it\.status !== 'pending'\) scheduleLeave/.test(src));
+    tru('기다리던 빠지기도 검색이 시작되면 멈춘다', /viewMode !== 'pending' \|\| searching\(\)\)\{ cancelLeave\(id\)/.test(src));
+    var at = src.indexOf('function openSearch(){');
+    tru('검색을 열면 대기 중인 빠지기를 거둔다', at >= 0 && src.slice(at, at + 200).indexOf('cancelAllLeaves()') >= 0);
+  })();
+
+  // 접기 — 보이는 것과 다른 기준으로 숨은 상태를 바꾸면, 눈엔 변화가 없는데 나중에 말없이 접혀 있다(2026-09-21 실측 셋).
+  //   A 검색 중 시간대 머리글  B 검색 중 「전체 접기」  C 「대기」에서 「전체 펼치기」가 두 번 눌러야 먹음
+  //   + 검색을 열자마자 0건이면 버튼이 켜진 채. 전부 tools/state-sweep.js 가 16가지 상태로 다시 잡는다.
+  group('접기 — 보이는 것과 같은 기준으로');
+  (function(){
+    var src = [].map.call(document.querySelectorAll('script:not([src])'), function(x){ return x.textContent; }).join('\n');
+    var ts = src.indexOf('function toggleSlot(time){');
+    tru('A 검색 중엔 시간대 머리글이 아무것도 안 바꾼다', ts >= 0 && src.slice(ts, ts + 400).indexOf('if (searching()) return;') >= 0);
+    var fb = src.indexOf("foldBtn.addEventListener('click'");
+    var fbody = fb < 0 ? '' : src.slice(fb, fb + 1400);
+    tru('B 검색 중엔 「전체 접기」가 아무것도 안 바꾼다', fbody.indexOf('if (searching()) return;') >= 0);
+    tru('B 검색 중엔 접기 버튼이 꺼진다', /foldBtnEl\.disabled = noGroups \|\| !!q/.test(src));
+    tru('C 접을지 펼칠지는 «보이는» 시간대로 정한다', fbody.indexOf("document.querySelector('#list .group:not(.shut)')") >= 0);
+    var em = src.indexOf('if (!items.length){');
+    tru('목록이 비어 일찍 끝나도 접기 버튼을 맞춘다', em >= 0 && src.slice(em, em + 300).indexOf('paintFoldBtn(true, 0, q)') >= 0);
   })();
 
   group('스타일시트 — 주석·규칙 온전성');
