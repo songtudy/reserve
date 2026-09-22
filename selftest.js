@@ -575,6 +575,7 @@
     check('MS.move  = --tMove', T.MS.move, tok('--tMove'));
     check('MS.press = --tPress', T.MS.press, tok('--tPress'));
     check('MS.state = --tState', T.MS.state, tok('--tState'));
+    check('MS.hold  = --holdms (길게 눌러 초기화)', T.MS.hold, tok('--holdms'));
     // 초 단위(.2s)를 ms 로 옳게 읽었나 — 0.2 로 읽으면 행이 즉시 지워진다
     tru('초 단위를 ms 로 읽는다', T.MS.move > 50 && T.MS.move < 2000, T.MS.move);
     tru('--tPress < --tState < --tMove', T.MS.press < T.MS.state && T.MS.state < T.MS.move,
@@ -648,6 +649,14 @@
     check('테스트앱 주소 → 1', C(D('songtudy.github.io', '/reserve-dev/')), 1);
     check('로컬 → 1', C(D('localhost', '/app/index.html')), 1);
     check('파일로 연 것 → 1', C(D('', '/Users/x/index.html')), 1);
+  })();
+
+  // 취소 되돌리기 — 이미 취소된 줄의 ⋯「취소」 = 대기로. 기록엔 「취소 해제」(방문을 거치지 않는다). 2026-09-22.
+  group('취소 되돌리기');
+  (function(){
+    var src = [].map.call(document.querySelectorAll('script:not([src])'), function(x){ return x.textContent; }).join('\n');
+    tru('취소된 줄에서 「취소」를 또 누르면 대기로', /status === 'cancelled' && it\.status === 'cancelled'\) status = 'pending'/.test(src));
+    tru('기록엔 「취소 해제」로 남는다', /it\.status === 'cancelled' \? '취소 해제'/.test(src));
   })();
 
   group('스타일시트 — 주석·규칙 온전성');
