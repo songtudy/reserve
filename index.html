@@ -1036,6 +1036,25 @@ window.addEventListener('pageshow', remeasureSbcut);
   /* margin:0 — 제 여백은 padding 으로 다 갖고 있다. 브라우저 기본 margin(13×2=26px)은 의도한 값이 아니었고,
      부모에 overflow 가 붙는 순간 높이에 더해지는 함정이 있다(기록 높이를 움직이던 때 끝에서 «되튐»으로
      드러났다, 2026-09-21). 그 움직임은 뺐지만 이 값은 그대로 맞다 — 시뮬레이터로 여백 확인함. */
+  /* 공지(업데이트 창) 안의 «카톡 글 흉내» — 사진을 넣지 않는다(손님 이름이 들어 있고 용량도 앱만큼 크다).
+     걸러지는 줄엔 지움선, 들어가는 줄은 또렷하게 — 그림 하나로 규칙이 보이게. 글자는 13(창 안내문과 같은 단). */
+  /* 한글은 기본값이 «아무 데서나» 끊긴다 — 「불필요한 줄 / 은」처럼 어절이 갈린다.
+     이 창만 어절 단위로 끊는다(초기화 창 문구는 짧아 건드릴 일이 없다). */
+  #ntScrim .dlgnote{word-break:keep-all}
+  .ntmock{
+    background:var(--field);border:1px solid var(--line);border-radius:12px;
+    padding:10px 12px;margin:12px 0 0;
+    font-size:13px;line-height:1.7;font-variant-numeric:tabular-nums;
+  }
+  .ntmock div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ntmock .off{color:var(--off);text-decoration:line-through}
+  .ntmock .on{color:var(--text);font-weight:600}
+  .ntmock .gap{height:6px}
+  /* «아래로 더 있다» 표시. ★이름을 .more 로 두면 안 된다 — 명단 행의 ⋯ 버튼이 이미 그 이름이라
+     display:grid·line-height:0·눌림 투명도까지 딸려 들어와 줄이 «높이 0» 으로 납작해진다(2026-09-28 실제로 겪음). */
+  .ntmock .ntdots{color:var(--dim);letter-spacing:.14em}
+  .dbtn #ntClose:active, .dbtn #ntClose.dn, .dbtn #ntNever:active, .dbtn #ntNever.dn{background:var(--btnPress)}
+  .dbtn #ntNever{font-size:15px}   /* 글자가 길어 17 이면 두 줄로 접힌다 — 알약 폭은 그대로 둔다 */
   .sheetMsg{margin:0;font-size:13px;line-height:1.6;color:var(--dim);padding:6px 0 14px}
 
   /* 「지난 명단」 시트 — 목록은 「최근 변경 내역」(.lgrow) 처럼 한 줄(시각·요약·›), 행을 누르면 상세. */
@@ -1915,6 +1934,26 @@ window.addEventListener('pageshow', remeasureSbcut);
   </div>
 </div>
 
+<!-- 업데이트 안내 — 초기화 창과 같은 «가운데 창» 부품. 눈에 안 보이는 변화는 이렇게만 알 수 있다. -->
+<div class="scrim hide" id="ntScrim">
+  <div class="dialog">
+    <h3>업데이트</h3>
+    <p class="dlgnote">단톡방에 올라오는 명단을 통째로 붙여넣으면 불필요한 줄은 알아서 제외합니다.</p>
+    <div class="ntmock">
+      <div class="off">9월 27일</div>
+      <div class="off">내국인 12팀 / 외국인 21팀</div>
+      <div class="gap"></div>
+      <div class="on">14:00 임동현 4명</div>
+      <div class="on">15:00 김동현 2명</div>
+      <div class="ntdots">⋯</div>
+    </div>
+    <div class="dbtn">
+      <button type="button" id="ntClose">닫기</button>
+      <button type="button" id="ntNever">다시 보지 않기</button>
+    </div>
+  </div>
+</div>
+
 <div class="scrim hide" id="rltScrim">
   <!-- 날벼락: 번쩍임 막 + 번개. 카드가 아니라 «막»에 그린다 — 카드(330×217)는 번개를 담기엔 너무
        작아 가지를 붙일 자리가 없고, 카드 안에서 시작하면 어디서 온 건지 안 읽힌다. 막에 그리면
@@ -2375,6 +2414,16 @@ window.dispatchEvent(new Event('fb-ready'));
   }
 
   /* ---------- 파싱 ---------- */
+  /* 단톡방 글을 «통째로» 붙여넣을 수 있게 (오너 2026-09-28).
+     예전엔 예약 줄이 아닌 것은 전부 「못 읽은 줄」로 올려서, 날짜·집계 머리글 때문에 헛경고가 떴다.
+     그렇다고 아무 줄이나 조용히 버리면 «예약을 빠뜨리고도 모르는» 게 더 위험하다. 그래서 기준을 둘로 나눈다:
+       · 시각도 인원도 없다 → 머리글·집계·빈 줄. 조용히 버린다.
+       · 하나라도 있다      → 사람이 적은 예약 줄로 보고, 못 읽으면 «반드시» 알린다.
+     ★꼬리(「2명 N 방문」의 N 같은 예약 경로 표시)는 이번 범위가 아니다 — 오너가 나중에 다루자고 했다(2026-09-28).
+       그런 줄은 지금도 «못 읽은 줄»로 «알려진다» — 조용히 사라지지는 않는다. */
+  var RE_TIME = /^(\d{1,2})\s*[:.시]\s*(\d{1,2})?\s*분?\s+/;
+  var RE_PAX  = /(\d+)\s*명/;
+  function looksLikeItem(line){ return RE_TIME.test(line) || RE_PAX.test(line); }
   function parse(text){
     var lines = String(text).split(/\r?\n/);
     var out = [], bad = [], seen = {};
@@ -2382,7 +2431,10 @@ window.dispatchEvent(new Event('fb-ready'));
       var line = lines[i].replace(/\s+/g,' ').trim();
       if (!line) continue;
       var m = line.match(/^(\d{1,2})\s*[:.시]\s*(\d{1,2})?\s*분?\s+(.+?)\s+(\d+)\s*명\s*(.*)$/);
-      if (!m){ bad.push({ no: i+1, text: line }); continue; }
+      if (!m){
+        if (looksLikeItem(line)) bad.push({ no: i+1, text: line });   // 예약처럼 생겼는데 못 읽음 → 알린다
+        continue;                                                      // 그 밖(머리글·집계)은 조용히 버린다
+      }
       var time = pad(+m[1]) + ':' + pad(+(m[2]||0));
       var name = m[3].trim();
       var pax  = parseInt(m[4],10);
@@ -2390,10 +2442,12 @@ window.dispatchEvent(new Event('fb-ready'));
       var memo = '';
       var mm2 = tail.match(/^(.*?)\s*\((.+)\)$/);   // 뒤에 붙은 (메모)
       if (mm2){ tail = mm2[1].trim(); memo = mm2[2].trim(); }
+      // 꼬리는 예전 그대로 — 방문/취소만 읽고 모르는 말은 오류로 알린다.
+      // 「2명 N 방문」처럼 예약 경로 표시가 붙은 줄도 아직은 오류로 잡힌다(오너: 그건 나중 문제).
       var status = 'pending';
       if (tail === '취소') status = 'cancelled';
       else if (tail === '방문') status = 'arrived';
-      else if (tail){ bad.push({ no: i+1, text: line }); continue; }  // 뒤에 붙은 알 수 없는 말
+      else if (tail){ bad.push({ no: i+1, text: line }); continue; }
       var hh = +m[1], mm = +(m[2]||0);
       if (hh > 23 || mm > 59 || pax < 1){ bad.push({ no: i+1, text: line }); continue; }
       var base = time + '|' + name + '|' + pax;
@@ -4119,10 +4173,13 @@ window.dispatchEvent(new Event('fb-ready'));
     fixTaHeight();
     panel.classList.remove('hide');
     document.body.classList.add('paste-open');
+    // 공지는 이 창에서만 뜬다. 뜨는 순간 키보드까지 올라오면 창 뒤가 반쯤 가려지니
+    // 그때는 자동 포커스를 접는다 — 읽고 닫은 뒤 입력칸을 직접 누르면 된다.
+    var noticed = maybeNotice();
     if (silent) return;
     // .wrap 을 카드로 부드럽게 스크롤 → 키보드가 올라와도 iOS 가 이어서 자연스럽게 조정
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setTimeout(function(){ taEl.focus(); }, 200);
+    if (!noticed) setTimeout(function(){ taEl.focus(); }, 200);
   }
   function closePaste(){
     // 입력칸을 «보이는 동안» 손으로 푼다. 숨기기(.hide = display:none)만 해도 크롬은 blur·
@@ -4356,7 +4413,8 @@ window.dispatchEvent(new Event('fb-ready'));
     sheet:    function(){ return ovVisible('sheetScrim'); },
     add:      function(){ return ovVisible('addPanel'); },
     dialog:   function(){ return ovVisible('scrim'); },
-    roulette: function(){ return ovVisible('rltScrim'); }
+    roulette: function(){ return ovVisible('rltScrim'); },
+    notice:   function(){ return ovVisible('ntScrim'); }
   };
   function backLive(){                           // 닫힌 것들을 걷어내고 남은 개수를 준다
     backStack = backStack.filter(function(e){ return OV_OPEN[e.key](); });
@@ -5487,7 +5545,8 @@ window.dispatchEvent(new Event('fb-ready'));
   var sheetScrim = document.getElementById('sheetScrim');
   function sheetBtnsReset(){                 // 시트 전용 버튼(설치·지난명단상세)을 원상복구
     var nv = document.getElementById('sheetNever');
-    if (nv) nv.classList.add('hide');        // '다시 보지 않기' 는 설치 안내 전용
+    if (nv) nv.classList.add('hide');        // '다시 보지 않기' 는 그것을 쓰는 안내에서만 켠다
+    neverSave = null;
     var bc = document.querySelector('.sheetBtns .sheetCopy');
     if (bc) bc.remove();                     // 시트 전용 복사 버튼(지난 명단 상세의 '명단 복사')
   }
@@ -6039,12 +6098,16 @@ window.dispatchEvent(new Event('fb-ready'));
       }) || drawer.classList.contains('open');
       if (blocked) return;
       openInstallSheet();
-      sheetNever.classList.remove('hide');
+      sheetNeverFor(HINT_KEY, '1');
     }, 1200);
   }
   var sheetNever = document.getElementById('sheetNever');
+  // 「다시 보지 않기」는 안내 하나만의 것이 아니다 — 누른 시트가 무엇을 기억할지 여기서 정한다.
+  // 예전엔 설치 안내의 표식을 늘 저장해서, 다른 안내에 붙이면 엉뚱한 것이 꺼졌다.
+  var neverSave = null;
+  function sheetNeverFor(key, val){ neverSave = { key: key, val: val }; sheetNever.classList.remove('hide'); }
   sheetNever.addEventListener('click', function(){
-    try { localStorage.setItem(HINT_KEY, '1'); } catch(e){}
+    if (neverSave){ try { localStorage.setItem(neverSave.key, neverSave.val); } catch(e){} }
     closeSheet();
   });
 
@@ -6259,6 +6322,40 @@ window.dispatchEvent(new Event('fb-ready'));
     });
   })();
 
+  /* ---------- 한 번만 뜨는 공지 ---------- */
+  // 눈에 안 보이는 변화(붙여넣기 규칙 같은 것)는 아무도 모르고 지나간다. 기기마다 «한 번» 알린다.
+  // NOTICE_ID 를 바꾸면 새 공지가 다시 한 번 뜬다. 값은 «무엇에 대한 공지인지»가 드러나게 적는다.
+  var NOTICE_ID = 'paste-2026-09-28';
+  var NOTICE_KEY = 'ix-notice';
+  function noticeDue(saved, id){ return saved !== id; }
+  var ntScrim = document.getElementById('ntScrim');
+  function closeNotice(never){
+    if (never){ try { localStorage.setItem(NOTICE_KEY, NOTICE_ID); } catch(e){} }
+    ntScrim.classList.add('hide');
+    backDone();
+  }
+  document.getElementById('ntClose').addEventListener('click', function(){ closeNotice(false); });
+  document.getElementById('ntNever').addEventListener('click', function(){ closeNotice(true); });
+  ntScrim.addEventListener('click', function(e){ if (e.target === ntScrim) closeNotice(false); });   // 막 바깥 탭 = 닫기
+  // ★«명단 입력 창(#pastePanel)이 열려 있을 때»만 띄운다 (오너 2026-09-28).
+  //   붙여넣기 이야기라 명단을 넣는 그 자리에서 봐야 바로 써먹는다 — 아무 때나 뜨면 그냥 방해다.
+  // 뭔가 떠 있거나 잠겨 있으면 다음 기회에 — 공지가 남의 창을 덮지 않게.
+  // 「다시 보지 않기」를 누를 때까지 그 창에 들어올 때마다 띄운다. 그냥 닫으면 다음에 또 뜬다 —
+  // 교대 근무라 한 사람만 보고 끝나면 소용이 없다.
+  // 띄웠으면 true 를 준다 — 부른 쪽이 키보드를 올릴지 말지 정한다.
+  function maybeNotice(){
+    if (!panel || panel.classList.contains('hide')) return false;
+    var saved = null;
+    try { saved = localStorage.getItem(NOTICE_KEY); } catch(e){ return false; }
+    if (!noticeDue(saved, NOTICE_ID)) return false;
+    if (document.documentElement.getAttribute('data-authed') !== '1') return false;
+    if (ovVisible('sheetScrim') || ovVisible('scrim') || ovVisible('rltScrim') || ovVisible('addPanel') || ovVisible('ntScrim')) return false;
+    if (drawer && drawer.classList.contains('open')) return false;
+    ntScrim.classList.remove('hide');
+    backOpen('notice', function(){ closeNotice(false); });
+    return true;
+  }
+
   /* ---------- 새 버전 알림 ---------- */
   // 파일이 새로 올라갔는지 HEAD 요청으로 확인한다. 바뀌었으면 헤더 아래에
   // 하단에 「새 버전으로 업데이트」 알약을 띄운다 — 그걸 눌러야 새로 뜬다. 저절로는 안 바뀜.
@@ -6457,7 +6554,7 @@ window.dispatchEvent(new Event('fb-ready'));
   if (/[?&]selftest\b/.test(location.search)) {
     if (splashEl) splashEl.classList.add('hide');   // 결과 화면을 가리지 않게
     window.__ixTest = {
-      parse: parse, normTime: normTime, sortItems: sortItems,
+      parse: parse, looksLikeItem: looksLikeItem, noticeDue: noticeDue, NOTICE_ID: NOTICE_ID, normTime: normTime, sortItems: sortItems,
       pad: pad, ymd: ymd, parseYmd: parseYmd, shiftDate: shiftDate, dayGap: dayGap, bizDate: bizDate,
       tallyStatus: tallyStatus, dayTally: dayTally,
       slotMin: slotMin, slotLive: slotLive, nowMin: nowMin, groupByTime: groupByTime, liveNowTime: liveNowTime,
@@ -6549,6 +6646,9 @@ window.dispatchEvent(new Event('fb-ready'));
       lockEl.classList.remove('out');
       // data-authed 는 맨 마지막에 — 먼저 걸면 CSS 가 즉시 display:none 으로 만들어 페이드가 죽는다
       document.documentElement.setAttribute('data-authed', '1');
+      // 잠금을 막 푼 경우 — 입력 창은 잠겨 있는 동안 이미 열려서 openPaste 가 다시 안 불린다.
+      // maybeNotice 안에서 「입력 창이 열려 있나」를 보므로 다른 화면이면 조용히 지나간다.
+      setTimeout(maybeNotice, 900);
     }, MS.move + 10);
   }
   function lockShow(msg){
