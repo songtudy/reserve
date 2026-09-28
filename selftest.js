@@ -66,9 +66,13 @@
     check('빈 줄·공백은 무시', T.parse('\n  \n14:00 홍길동 2명\n\n').length, 1);
     check('여러 줄', T.parse('12:00 A 2명\n13:00 B 3명').length, 2);
 
+    // ★2026-09-28 규칙 바뀜: 단톡방 글을 통째로 붙여넣을 수 있게, «시각도 인원도 없는 줄»은 조용히 버린다.
+    //   예약을 놓치는 건 위험하므로 «시각이나 인원이 하나라도 있는데» 못 읽으면 예전처럼 알린다.
     var bad = T.parse('이건 양식이 아님\n14:00 홍길동 2명\n15:00 없음');
-    check('오류 줄은 bad 로', bad.bad.map(function(b){ return b.no; }), [1, 3]);
-    check('오류 줄은 out 에서 제외', bad.length, 1);
+    check('머리글 같은 줄은 조용히 버린다', bad.bad.map(function(b){ return b.no; }), [3]);
+    check('못 읽은 줄은 out 에서 제외', bad.length, 1);
+    check('인원만 있고 시각이 없으면 알린다', T.parse('홍길동 2명').bad.length, 1);
+    check('시각만 있고 인원이 없으면 알린다', T.parse('15:00 홍길동').bad.length, 1);
 
     check('알 수 없는 꼬리는 오류', T.parse('14:00 홍길동 2명 뭐임').bad.length, 1);
     check('24시 이상은 오류', T.parse('25:00 홍길동 2명').bad.length, 1);
@@ -680,6 +684,79 @@
     check('★한쪽만 last-modified → 바뀐 걸로 보지 않는다', T2.tagChanged(lmOnly, old), false);
     check('last-modified 끼리 새것 → 바뀜', T2.tagChanged(lmOnly, { etag:'', lm:'Wed, 23 Sep 2026 02:11:34 GMT' }), true);
     check('last-modified 끼리 옛것 → 안 바뀜', T2.tagChanged(lmOnly, { etag:'', lm:'Mon, 21 Sep 2026 02:11:34 GMT' }), false);
+  })();
+
+  // 단톡방 글 통째 붙여넣기 (오너 2026-09-28). 실제로 올라온 글 모양으로 검사한다.
+  group('붙여넣기 — 단톡방 글 통째로');
+  (function(){
+    var msg = '9월 10일 목요일\n\n내국인 1팀 / 외국인 23팀\n네이버 4팀 / 캐치테이블 20팀\n\n'
+            + '12:00 Nicole 2명 N 방문\n\n14:00 Meryl Koh 4명 방문\n14:00 Lilian Ngay 2명 취소\n'
+            + '19:00 심예린 2명 N 방문\n19:00 Dorin Klein Luzon 6명 방문';
+    var r = T.parse(msg);
+    check('예약만 골라낸다 (N 붙은 2줄은 아직 오류)', r.length, 3);
+    check('★머리글 3줄은 경고 없이 버린다', r.bad.length, 2);
+    check('★남은 경고는 N 붙은 줄뿐 — 머리글은 없다',
+          r.bad.every(function(b){ return b.text.indexOf(' N ') >= 0; }), true);
+    check('공백 든 이름', r[2] && r[2].name, 'Dorin Klein Luzon');
+    check('방문을 읽는다', r[0] && r[0].status, 'arrived');
+    check('취소를 읽는다', r[1] && r[1].status, 'cancelled');
+    tru('머리글은 예약처럼 안 보인다', !T.looksLikeItem('내국인 1팀 / 외국인 23팀') && !T.looksLikeItem('9월 10일 목요일'));
+    tru('시각이 있으면 예약처럼 본다', T.looksLikeItem('15:00 홍길동'));
+  })();
+
+  // 한 번만 뜨는 공지 — 「다시 보지 않기」를 누를 때까지 켤 때마다 뜬다(오너 2026-09-28).
+  group('공지 — 다시 보지 않기');
+  (function(){
+    var F = T.noticeDue, ID = T.NOTICE_ID;
+    tru('판정 함수와 공지 번호를 내보낸다', typeof F === 'function' && !!ID, ID);
+    if (typeof F !== 'function') return;
+    check('아직 안 껐으면 뜬다', F(null, ID), true);
+    check('그냥 닫았을 때(저장 안 함)도 다시 뜬다', F(null, ID), true);
+    check('다시 보지 않기 누른 뒤엔 안 뜬다', F(ID, ID), false);
+    check('새 공지 번호가 되면 다시 뜬다', F('paste-2026-09-28-old', ID), true);
+    var src = [].map.call(document.querySelectorAll('script:not([src])'), function(x){ return x.textContent; }).join('\n');
+    var at = src.indexOf('function maybeNotice()');
+    var body = at < 0 ? '' : src.slice(at, at + 900);
+    tru('공지를 띄울 때 표식을 «미리» 저장하지 않는다', body && body.indexOf('setItem') < 0);
+    tru('잠겨 있거나 다른 창이 떠 있으면 안 띄운다', /data-authed|ovVisible/.test(body));
+    // ★명단 입력 창에서만 뜬다(오너 2026-09-28) — 아무 화면에서나 뜨면 그냥 방해다.
+    tru('명단 입력 창이 닫혀 있으면 안 띄운다', /panel\.classList\.contains\('hide'\)/.test(body));
+    tru('첫 그림에서 무조건 띄우던 길이 없다', src.indexOf('noticeTried') < 0);
+    var at2 = src.indexOf('function openPaste(');
+    var ob = at2 < 0 ? '' : src.slice(at2, at2 + 1200);
+    tru('입력 창을 열 때 부른다', /maybeNotice\(\)/.test(ob));
+    tru('공지가 뜨면 키보드는 안 올린다', /if \(!noticed\)[\s\S]{0,60}focus\(\)/.test(ob));
+
+    // 시트(바닥에서 올라오는 것)가 아니라 «가운데 창» — 초기화 창과 같은 부품이어야 한다(오너 2026-09-28).
+    var sc = document.getElementById('ntScrim');
+    tru('가운데 창 부품을 쓴다', !!sc && sc.classList.contains('scrim') && !!sc.querySelector('.dialog'));
+    if (!sc) return;
+    tru('바닥 시트로 띄우지 않는다', body && body.indexOf('openSheet') < 0);
+    var h3 = sc.querySelector('h3');
+    check('제목', h3 && h3.textContent, '업데이트');
+    var note = sc.querySelector('.dlgnote');
+    tru('설명은 한 단락뿐', sc.querySelectorAll('.dlgnote').length === 1);
+    tru('설명이 짧다(한 문장)', note && note.textContent.length <= 45 && (note.textContent.match(/\./g)||[]).length <= 1, note ? note.textContent.length + '자' : '없음');
+    var bs = sc.querySelectorAll('.dbtn button');
+    check('버튼 두 개', bs.length, 2);
+    check('왼쪽 버튼', bs[0] && bs[0].textContent, '닫기');
+    check('오른쪽 버튼', bs[1] && bs[1].textContent, '다시 보지 않기');
+    // 「다시 보지 않기」가 초기화 버튼과 같은 빨강이면 안 된다 — 지우는 일이 아니다.
+    // 토큰 문자열(#rrggbb)과 computed 값(rgb())은 모양이 달라 비교가 안 된다 → 실제 빨강 버튼과 견준다.
+    var red = document.getElementById('dlgYes');
+    var redBg = red ? getComputedStyle(red).backgroundColor : '';
+    tru('경고색(빨강) 버튼이 아니다', !!redBg && [].every.call(bs, function(b){
+      return getComputedStyle(b).backgroundColor !== redBg;
+    }), redBg);
+    var mock = sc.querySelector('.ntmock');
+    tru('걸러지는 줄엔 지움선이 그어져 있다', mock && /line-through/.test(getComputedStyle(mock.querySelector('.off')).textDecorationLine + getComputedStyle(mock.querySelector('.off')).textDecoration));
+    tru('예시 이름은 임동현·김동현', mock && /임동현/.test(mock.textContent) && /김동현/.test(mock.textContent));
+    var dots = mock && mock.querySelector('.ntdots');
+    tru('아래로 더 있다는 표시가 있다', !!dots);
+    // 이름이 겹치면 남의 규칙이 딸려 들어와 줄이 납작해진다 — «보이는지»까지 확인한다.
+    tru('그 표시가 실제로 보인다', !!dots && dots.getBoundingClientRect().height >= 14,
+        dots ? Math.round(dots.getBoundingClientRect().height) + 'px' : '없음');
+    tru('뒤로 가기 목록에 등록한다', /backOpen\('notice'/.test(body));
   })();
 
   group('스타일시트 — 주석·규칙 온전성');
